@@ -132,9 +132,9 @@ class VideoService {
 
     timeByIndex(index) {
         return {
-            '1': '3,6',
-            '2': '6,9',
-            '3': '9,12',
+            '1': '3.1,5.9',
+            '2': '6.1,8.9',
+            '3': '9.1,11.9',
         }[index];
     }
 
@@ -265,7 +265,7 @@ class VideoService {
 
         const filterTitle = [];
         titleFormated.forEach(item => {
-            filterTitle.push(`drawtext=text='${item.text}':x=(w-text_w)/2:y=(h-text_h)/${item.y}:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,0,3)'`);
+            filterTitle.push(`drawtext=text='${item.text}':x=(w-text_w)/2:y=(h-text_h)/${item.y}:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,0,2.9)'`);
         });
         // console.log(filterTitle);
 
@@ -273,7 +273,7 @@ class VideoService {
         const inputImgs = [];
         const filtersAds = [];
 
-        const titleAdsLimitLength = 108;
+        const titleAdsLimitLength = 99;
         const setTitleFormated = (titleFormated, index, text) => {
             // console.log('index: ', index, 'text: ', text);
             if (index <= 3) {
@@ -367,16 +367,16 @@ class VideoService {
         const arrayFfmepg = [
             '-i', filePath,
             ...inputImgs,
-            '-filter_complex', `[1:v] scale=${scaleImgs} [img1]; [0:v][img1] overlay=${overlayImgs}:enable='between(t,3,6)' [v0];
-                [2:v] scale=${scaleImgs} [img2]; [v0][img2] overlay=${overlayImgs}:enable='between(t,6,9)' [v1];
-                [3:v] scale=${scaleImgs} [img3]; [v1][img3] overlay=${overlayImgs}:enable='between(t,9,12)',
+            '-filter_complex', `[1:v] scale=${scaleImgs} [img1]; [0:v][img1] overlay=${overlayImgs}:enable='between(t,3.1,5.9)' [v0];
+                [2:v] scale=${scaleImgs} [img2]; [v0][img2] overlay=${overlayImgs}:enable='between(t,6.1,8.9)' [v1];
+                [3:v] scale=${scaleImgs} [img3]; [v1][img3] overlay=${overlayImgs}:enable='between(t,9.1,11.9)',
                 ${filterTitle.join(',')},
                 ${filtersAds.join(',')},
-                drawtext=text='Siga':x=(w-text_w)/2:y=(h-text_h)/3:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,12,15)',
-                drawtext=text='nossas':x=(w-text_w)/2:y=(h-text_h)/2.5:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,12,15)',
-                drawtext=text='redes sociais':x=(w-text_w)/2:y=(h-text_h)/2.15:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,12,15)',
-                drawtext=text='para mais':x=(w-text_w)/2:y=(h-text_h)/1.9:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,12,15)',
-                drawtext=text='promoções':x=(w-text_w)/2:y=(h-text_h)/1.7:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,12,15)'`,
+                drawtext=text='Siga':x=(w-text_w)/2:y=(h-text_h)/3:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,12.1,15)',
+                drawtext=text='nossas':x=(w-text_w)/2:y=(h-text_h)/2.5:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,12.1,15)',
+                drawtext=text='redes sociais':x=(w-text_w)/2:y=(h-text_h)/2.15:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,12.1,15)',
+                drawtext=text='para mais':x=(w-text_w)/2:y=(h-text_h)/1.9:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,12.1,15)',
+                drawtext=text='promoções':x=(w-text_w)/2:y=(h-text_h)/1.7:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,12.1,15)'`,
             '-c:v',
             'libx264',
             '-preset',
