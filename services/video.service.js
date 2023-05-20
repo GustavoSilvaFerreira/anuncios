@@ -1,4 +1,4 @@
-const { DIR_TEMP, DIR_FONT, DIR_TO_POST } = require("../core/directory.config");
+const { DIR_TEMP, DIR_FONT, DIR_TO_POST, DIR_VIDEOS } = require("../core/directory.config");
 
 const { open, } = require('node:fs/promises');
 const fs = require('node:fs');
@@ -12,6 +12,62 @@ const { spawn } = require('node:child_process');
 
 class VideoService {
     filePath = `${DIR_TEMP}/testes/teste.mp4`;
+    VIDEOS_CONFIG = {
+        template_1: {
+            timeByIndex: (index) => {
+                return {
+                    '1': '3.1,5.9',
+                    '2': '6.1,8.9',
+                    '3': '9.1,11.9',
+                }[index];
+            },
+            fontFamily: {
+                titleFirstEndPage: `${DIR_FONT.replace(/[\\]/g, '/')}/gagalin.otf`,
+                ads: `${DIR_FONT.replace(/[\\]/g, '/')}/roboto.ttf`,
+                price: `${DIR_FONT.replace(/[\\]/g, '/')}/roboto-black.ttf`,
+            },
+            fontSize: {
+                titleFirstEndPage: 100,
+                ads: {
+                    title: 55,
+                    subTitle: 45,
+                    price: 110,
+                    code: 50
+                }
+            },
+            scaleImgs: 'w=iw*1.5:h=ih*1.5',
+            overlayImgs: '(main_w-overlay_w)/2:750',
+            templateColor: {
+                purple: {
+                    filePath: `${DIR_VIDEOS}/model_1_purple.mp4`,
+                    fontColor: {
+                        titleFirstEndPage: '#723F33',
+                        adsTitle: '#ffffff',
+                        price: '#FFDE59',
+                        code: '#000000'
+                    }
+                },
+                yellow: {
+                    filePath: `${DIR_VIDEOS}/model_1_yellow.mp4`,
+                    fontColor: {
+                        titleFirstEndPage: '#723F33',
+                        adsTitle: '#9141B2',
+                        price: '#9141B2',
+                        code: '#723F33'
+                    }
+                },
+                orange: {
+                    filePath: `${DIR_VIDEOS}/model_1_orange.mp4`,
+                    fontColor: {
+                        titleFirstEndPage: '#723F33',
+                        adsTitle: '#ffffff',
+                        price: '#ffffff',
+                        code: '#723F33'
+                    }
+                }
+            }
+        }
+    }
 
     async teste() {
         const posts = {
@@ -105,31 +161,6 @@ class VideoService {
         }
     }
 
-    // async createVideo() {
-    //     const video = await spawn(pathToFfmpeg, [
-    //         '-i', filePath,
-    //         '-i', img1,
-    //         '-i', img2,
-    //         '-i', img3,
-    //         '-filter_complex', `[1:v] scale=${scaleImgs} [img1]; [0:v][img1] overlay=${overlayImgs}:enable='between(t,3,6)' [v0];
-    //             [2:v] scale=${scaleImgs} [img2]; [v0][img2] overlay=${overlayImgs}:enable='between(t,6,9)' [v1];
-    //             [3:v] scale=${scaleImgs} [img3]; [v1][img3] overlay=${overlayImgs}:enable='between(t,9,12)',
-    //             drawtext=text='${title}':x=(w-text_w)/2:y=(h-text_h)/2.6:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,0,3)',
-    //             drawtext=text='${title2}':x=(w-text_w)/2:y=(h-text_h)/2.15:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,0,3)',
-    //             drawtext=text='${title3}':x=(w-text_w)/2:y=(h-text_h)/1.85:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,0,3)',
-    //             drawtext=text='${posts[1].title}':x=(w-text_w)/2:y=100:fontfile=${fontFamily.ads}:fontsize=${fontSize.ads.title}:fontcolor=#ffffff:enable='between(t,3,6)',
-    //             drawtext=text='À VISTA':x=(w-text_w)/2:y=300:fontfile=${fontFamily.ads}:fontsize=${fontSize.ads.subTitle}:fontcolor=#FFDE59:enable='between(t,3,6)',
-    //             drawtext=text='${posts[1].price}':x=(w-text_w)/2:y=350:fontfile=${fontFamily.price}:fontsize=${fontSize.ads.price}:fontcolor=#FFDE59:enable='between(t,3,6)',
-    //             drawtext=text='Código ${posts[1].code}':x=(w-text_w)/2:y=600:fontfile=${fontFamily.ads}:fontsize=${fontSize.ads.code}:fontcolor=#000000:enable='between(t,3,6)'`,
-    //         '-c:v', 'libx264',
-    //         '-preset', 'ultrafast',
-    //         '-qp', '20',
-    //         '-c:a', 'copy',
-    //         '-y', `${DIR_TEMP}/testes/saida.mp4`
-    //     ]);
-    //     console.log({video});
-    // }
-
     timeByIndex(index) {
         return {
             '1': '3.1,5.9',
@@ -146,69 +177,32 @@ class VideoService {
                     const text = item[key].replace(regex, '');
                     item[key] = text;
                 }
-            })
-            // console.log(item);
-            // console.log();
+            });
         }
     }
 
     async createVideo(post, pathVideoOut) {
         this.validateAdsCharacter(post.ads);
-        const filePath = this.filePath
-        // console.log(ffprobe.path);
-        // console.log(pathToFfmpeg);
-        // const title = 'Seleção'.toUpperCase();
-        // const title2 = 'ovo de'.toUpperCase();
-        // const title3 = 'páscoa'.toUpperCase();
+        // Seleciona o template
+        const template = this.VIDEOS_CONFIG.template_1;
+
+        // Seleciona de forma aleatória a cor do template
+        const arrayTemplateColor = Object.keys(template.templateColor);
+        const randomNumber = Math.floor(Math.random() * arrayTemplateColor.length);
+        const keyTemplateColorRandom = randomNumber > (arrayTemplateColor.length - 1) ? 0 : randomNumber;
+        const templateColorSelected = template.templateColor[arrayTemplateColor[keyTemplateColorRandom]];
+
+        // Atribui as configurações do template para serem utilizadas durante a criação do vídeo
+        const fontFamily = template.fontFamily;
+        const fontSize = template.fontSize;
+        const scaleImgs = template.scaleImgs;
+        const overlayImgs = template.overlayImgs;
+        const filePath = templateColorSelected.filePath;
+        const videoConfig = templateColorSelected;
+
         console.log('init create video...');
-        // const postsTeste = {
-        //     title: 'Seleção ovo de páscoa',
-        //     ads: {
-        //         '1': {
-        //             title: 'Chocolate nest nestl em barras 100gr Chocolate nestle em barras 100gr Chocolate nestle em barras 100gr Chocolate nest nestl em barras 100gr Chocolate nestle em barras 100gr Chocolate nestle em barras 100gr',
-        //             price: 'R$ 1.259,99',
-        //             code: 'a4f65465dsaf',
-        //             imgName: 'product1.jpeg'
-        //         },
-        //         '2': {
-        //             title: 'Chocolate garoto 250gr Chocolate garoto barras 250gr',
-        //             price: 'R$ 89,00',
-        //             code: 'ej51b65heg',
-        //             imgName: 'product2.jpeg'
-        //         },
-        //         '3': {
-        //             title: 'Chocolate talento em barras 150gr',
-        //             price: 'R$ 29,99',
-        //             code: 'ag5g4dd21b',
-        //             imgName: 'product3.jpeg'
-        //         }
-        //     }
-        // }
+        
         if (fs.existsSync(`${DIR_TEMP}/testes/saida.mp4`)) await fs.rm(`${DIR_TEMP}/testes/saida.mp4`, () => { console.log('deleted!'); });
-        // const fontFamily = './files/font/gagalin.ttf';
-        // const fontFamily = 'C:/Users/guto7/workspace/anuncios/files/font/gagalin.ttf';
-        const fontFamily = {
-            titleFirstEndPage: `${DIR_FONT.replace(/[\\]/g, '/')}/gagalin.otf`,
-            ads: `${DIR_FONT.replace(/[\\]/g, '/')}/roboto.ttf`,
-            price: `${DIR_FONT.replace(/[\\]/g, '/')}/roboto-black.ttf`,
-        };
-        const fontSize = {
-            titleFirstEndPage: 100,
-            ads: {
-                title: 55,
-                subTitle: 45,
-                price: 110,
-                code: 50
-            }
-        }
-        // console.log({fontFamily});
-        const pathImages = `${DIR_TEMP}/testes/`;
-        // console.log({pathImages});
-        // const img1 = `${DIR_TEMP}/testes/product1.jpeg`;
-        // const img2 = `${DIR_TEMP}/testes/product2.jpeg`;
-        // const img3 = `${DIR_TEMP}/testes/product3.jpeg`;
-        const scaleImgs = 'w=iw*1.5:h=ih*1.5';
-        const overlayImgs = '(main_w-overlay_w)/2:750';
 
         // Title page 1
         const titleSplit = post.titleVideo.split(' ');
@@ -265,7 +259,7 @@ class VideoService {
 
         const filterTitle = [];
         titleFormated.forEach(item => {
-            filterTitle.push(`drawtext=text='${item.text}':x=(w-text_w)/2:y=(h-text_h)/${item.y}:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,0,2.9)'`);
+            filterTitle.push(`drawtext=text='${item.text}':x=(w-text_w)/2:y=(h-text_h)/${item.y}:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=${videoConfig.fontColor.titleFirstEndPage}:enable='between(t,0,2.9)'`);
         });
         // console.log(filterTitle);
 
@@ -344,25 +338,13 @@ class VideoService {
                         break;
                 }
                 titleAdsFormated.forEach(item => {
-                    filtersAds.push(`drawtext=text='${item.text}':x=(w-text_w)/2:y=${item.y}:fontfile=${fontFamily.ads}:fontsize=${fontSize.ads.title}:fontcolor=#ffffff:enable='between(t,${time})'`);
+                    filtersAds.push(`drawtext=text='${item.text}':x=(w-text_w)/2:y=${item.y}:fontfile=${fontFamily.ads}:fontsize=${fontSize.ads.title}:fontcolor=${videoConfig.fontColor.adsTitle}:enable='between(t,${time})'`);
                 });
-                filtersAds.push(`drawtext=text='À VISTA':x=(w-text_w)/2:y=300:fontfile=${fontFamily.ads}:fontsize=${fontSize.ads.subTitle}:fontcolor=#FFDE59:enable='between(t,${time})'`);
-                filtersAds.push(`drawtext=text='${ad.price}':x=(w-text_w)/2:y=350:fontfile=${fontFamily.price}:fontsize=${fontSize.ads.price}:fontcolor=#FFDE59:enable='between(t,${time})'`);
-                filtersAds.push(`drawtext=text='Código ${ad.code}':x=(w-text_w)/2:y=600:fontfile=${fontFamily.ads}:fontsize=${fontSize.ads.code}:fontcolor=#000000:enable='between(t,${time})'`);
+                filtersAds.push(`drawtext=text='À VISTA':x=(w-text_w)/2:y=300:fontfile=${fontFamily.ads}:fontsize=${fontSize.ads.subTitle}:fontcolor=${videoConfig.fontColor.price}:enable='between(t,${time})'`);
+                filtersAds.push(`drawtext=text='${ad.price}':x=(w-text_w)/2:y=350:fontfile=${fontFamily.price}:fontsize=${fontSize.ads.price}:fontcolor=${videoConfig.fontColor.price}:enable='between(t,${time})'`);
+                filtersAds.push(`drawtext=text='Código ${ad.code}':x=(w-text_w)/2:y=600:fontfile=${fontFamily.ads}:fontsize=${fontSize.ads.code}:fontcolor=${videoConfig.fontColor.code}:enable='between(t,${time})'`);
             }
         });
-        // console.log(filtersAds);
-        // console.log(inputImgs);
-
-        // drawtext=text='${title}':x=(w-text_w)/2:y=(h-text_h)/2.6:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,0,3)',
-        //         drawtext=text='${title2}':x=(w-text_w)/2:y=(h-text_h)/2.15:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,0,3)',
-        //         drawtext=text='${title3}':x=(w-text_w)/2:y=(h-text_h)/1.85:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,0,3)',
-
-        // drawtext=text='${posts[1].title}':x=(w-text_w)/2:y=100:fontfile=${fontFamily.ads}:fontsize=${fontSize.ads.title}:fontcolor=#ffffff:enable='between(t,3,6)',
-        //         drawtext=text='À VISTA':x=(w-text_w)/2:y=300:fontfile=${fontFamily.ads}:fontsize=${fontSize.ads.subTitle}:fontcolor=#FFDE59:enable='between(t,3,6)',
-        //         drawtext=text='${posts[1].price}':x=(w-text_w)/2:y=350:fontfile=${fontFamily.price}:fontsize=${fontSize.ads.price}:fontcolor=#FFDE59:enable='between(t,3,6)',
-        //         drawtext=text='Código ${posts[1].code}':x=(w-text_w)/2:y=600:fontfile=${fontFamily.ads}:fontsize=${fontSize.ads.code}:fontcolor=#000000:enable='between(t,3,6)'`,
-
 
         const arrayFfmepg = [
             '-i', filePath,
@@ -372,11 +354,11 @@ class VideoService {
                 [3:v] scale=${scaleImgs} [img3]; [v1][img3] overlay=${overlayImgs}:enable='between(t,9.1,11.9)',
                 ${filterTitle.join(',')},
                 ${filtersAds.join(',')},
-                drawtext=text='Siga':x=(w-text_w)/2:y=(h-text_h)/3:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,12.1,15)',
-                drawtext=text='nossas':x=(w-text_w)/2:y=(h-text_h)/2.5:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,12.1,15)',
-                drawtext=text='redes sociais':x=(w-text_w)/2:y=(h-text_h)/2.15:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,12.1,15)',
-                drawtext=text='para mais':x=(w-text_w)/2:y=(h-text_h)/1.9:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,12.1,15)',
-                drawtext=text='promoções':x=(w-text_w)/2:y=(h-text_h)/1.7:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=#723F33:enable='between(t,12.1,15)'`,
+                drawtext=text='Siga':x=(w-text_w)/2:y=(h-text_h)/3:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=${videoConfig.fontColor.titleFirstEndPage}:enable='between(t,12.1,15)',
+                drawtext=text='nossas':x=(w-text_w)/2:y=(h-text_h)/2.5:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=${videoConfig.fontColor.titleFirstEndPage}:enable='between(t,12.1,15)',
+                drawtext=text='redes sociais':x=(w-text_w)/2:y=(h-text_h)/2.15:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=${videoConfig.fontColor.titleFirstEndPage}:enable='between(t,12.1,15)',
+                drawtext=text='para mais':x=(w-text_w)/2:y=(h-text_h)/1.9:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=${videoConfig.fontColor.titleFirstEndPage}:enable='between(t,12.1,15)',
+                drawtext=text='promoções':x=(w-text_w)/2:y=(h-text_h)/1.7:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=${videoConfig.fontColor.titleFirstEndPage}:enable='between(t,12.1,15)'`,
             '-c:v',
             'libx264',
             '-preset',
