@@ -64,6 +64,24 @@ class VideoService {
                         price: '#ffffff',
                         code: '#723F33'
                     }
+                },
+                baby_blue: {
+                    filePath: `${DIR_VIDEOS}/model_1_baby_blue.mp4`,
+                    fontColor: {
+                        titleFirstEndPage: '#723F33',
+                        adsTitle: '#ffffff',
+                        price: '#ffffff',
+                        code: '#723F33'
+                    }
+                },
+                green: {
+                    filePath: `${DIR_VIDEOS}/model_1_green.mp4`,
+                    fontColor: {
+                        titleFirstEndPage: '#723F33',
+                        adsTitle: '#ffffff',
+                        price: '#ffffff',
+                        code: '#723F33'
+                    }
                 }
             }
         }
