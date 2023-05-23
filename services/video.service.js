@@ -12,6 +12,7 @@ const { spawn } = require('node:child_process');
 
 class VideoService {
     filePath = `${DIR_TEMP}/testes/teste.mp4`;
+    videosRandom = [];
     VIDEOS_CONFIG = {
         template_1: {
             timeByIndex: (index) => {
@@ -85,6 +86,10 @@ class VideoService {
                 }
             }
         }
+    }
+
+    constructor() {
+        this.setVideosRandom();
     }
 
     async teste() {
@@ -171,7 +176,7 @@ class VideoService {
         for (const post of posts.posts) {
             try {
                 const result = await this.createVideo(post, `${DIR_TO_POST}/saida_${count}.mp4`);
-                if(result) console.log(`Vídeo ${post.titleVideo} criado com sucesso!`);
+                if (result) console.log(`Vídeo ${post.titleVideo} criado com sucesso!`);
             } catch (error) {
                 console.log(`Error ao criar o video ${post.titleVideo} `);
             }
@@ -179,13 +184,13 @@ class VideoService {
         }
     }
 
-    timeByIndex(index) {
-        return {
-            '1': '3.1,5.9',
-            '2': '6.1,8.9',
-            '3': '9.1,11.9',
-        }[index];
-    }
+    // timeByIndex(index) {
+    //     return {
+    //         '1': '3.1,5.9',
+    //         '2': '6.1,8.9',
+    //         '3': '9.1,11.9',
+    //     }[index];
+    // }
 
     validateAdsCharacter(ads) {
         const regex = /([\u0300-\u036f]|[^0-9a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÍÏÓÔÕÖÚÇÑ\#\ \$\*\(\)\=\/\;\.\,\-\_\\])/g;
@@ -199,27 +204,59 @@ class VideoService {
         }
     }
 
+    setVideosRandom() {
+        Object.keys(this.VIDEOS_CONFIG).forEach(template => {
+            return Object.keys(this.VIDEOS_CONFIG[template].templateColor).forEach(templateColor => {
+                this.videosRandom.push({
+                    template,
+                    templateColor
+                });
+            });
+        });
+    }
+
+    getTemplateVideoSelected() {
+        const randomNumber = Math.floor(Math.random() * this.videosRandom.length);
+        const keyVideoRandom = randomNumber > (this.videosRandom.length - 1) ? 0 : randomNumber;
+        const videoTemplateSelected = this.videosRandom[keyVideoRandom];
+        const template = this.VIDEOS_CONFIG[videoTemplateSelected.template];
+        const templateColorSelected = template.templateColor[videoTemplateSelected.templateColor];
+        this.videosRandom.splice(keyVideoRandom, 1);
+        return { template, templateColorSelected };
+    }
+
     async createVideo(post, pathVideoOut) {
         this.validateAdsCharacter(post.ads);
         // Seleciona o template
-        const template = this.VIDEOS_CONFIG.template_1;
-
+        // const template = this.VIDEOS_CONFIG.template_1;
+        if (this.videosRandom.length === 0) {
+            this.setVideosRandom();
+        }
         // Seleciona de forma aleatória a cor do template
-        const arrayTemplateColor = Object.keys(template.templateColor);
-        const randomNumber = Math.floor(Math.random() * arrayTemplateColor.length);
-        const keyTemplateColorRandom = randomNumber > (arrayTemplateColor.length - 1) ? 0 : randomNumber;
-        const templateColorSelected = template.templateColor[arrayTemplateColor[keyTemplateColorRandom]];
+        // const randomNumber = Math.floor(Math.random() * this.videosRandom.length);
+        // const keyVideoRandom = randomNumber > (this.videosRandom.length - 1) ? 0 : randomNumber;
+        // const videoTemplateSelected = this.videosRandom[keyVideoRandom];
+        // const template = this.VIDEOS_CONFIG[videoTemplateSelected.template];
+        // const templateColorSelected = template.templateColor[videoTemplateSelected.templateColor];
+        // this.videosRandom.splice(keyVideoRandom, 1);
+        const { template, templateColorSelected } = this.getTemplateVideoSelected();
+
+        // const arrayTemplateColor = Object.keys(template.templateColor);
+        // const randomNumber = Math.floor(Math.random() * arrayTemplateColor.length);
+        // const keyTemplateColorRandom = randomNumber > (arrayTemplateColor.length - 1) ? 0 : randomNumber;
+        // const templateColorSelected = template.templateColor[arrayTemplateColor[keyTemplateColorRandom]];
 
         // Atribui as configurações do template para serem utilizadas durante a criação do vídeo
         const fontFamily = template.fontFamily;
         const fontSize = template.fontSize;
         const scaleImgs = template.scaleImgs;
         const overlayImgs = template.overlayImgs;
+        const timeByIndex = template.timeByIndex;
         const filePath = templateColorSelected.filePath;
         const videoConfig = templateColorSelected;
 
         console.log('init create video...');
-        
+
         if (fs.existsSync(`${DIR_TEMP}/testes/saida.mp4`)) await fs.rm(`${DIR_TEMP}/testes/saida.mp4`, () => { console.log('deleted!'); });
 
         // Title page 1
@@ -302,7 +339,7 @@ class VideoService {
         }
 
         post.ads.forEach((ad, index) => {
-            const time = this.timeByIndex(index + 1);
+            const time = timeByIndex(index + 1);
             if (time) {
                 inputImgs.push('-i');
                 // inputImgs.push(pathImages + `product${index + 1}.jpeg`);
@@ -390,14 +427,14 @@ class VideoService {
         // console.log(arrayFfmepg);
         return new Promise((resolve, reject) => {
             const resultVideo = spawn(pathToFfmpeg, arrayFfmepg);
-             resultVideo.on('close', function (code) {
+            resultVideo.on('close', function (code) {
                 // console.log('on: ', code);
                 // console.log('end create video...');
-                if(code == 1) {
+                if (code == 1) {
                     reject(false);
                 }
                 resolve(true);
-             });
+            });
         });
 
         // spawn(pathToFfmpeg, [
