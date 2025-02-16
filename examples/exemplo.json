@@ -1,0 +1,44 @@
+{
+    "date": {
+        "day": 5,
+        "month": 4,
+        "year": 2023
+    },
+    "posts": [
+        {
+            "titlePost": "Seleção de Ovo de Páscoa temático Infantil titlePost",
+            "titleVideo": "Seleção ovo de páscoa",
+            "hashtags": [
+                "#pascoa",
+                "#chocolate",
+                "#ovodepascoa"
+            ],
+            "ads": [
+                {
+                    "title": "Ovo de Páscoa Sonic Ovo de Pascoa com Pipoqueira Sonic ovo Infantil - Baunilha Confeitaria",
+                    "code": "ea5ga2c60h",
+                    "imgLink": "https://a-static.mlcdn.com.br/618x463/ovo-de-pascoa-sonic-ovo-de-pascoa-com-pipoqueira-sonic-ovo-infantil-baunilha-confeitaria/alphaeomega/93cb85a0c44911edad724201ac18502f/b76d281618d992e6bbcd7bbad3a28ff5.jpeg",
+                    "price": "R$ 64,50",
+                    "link": "https://www.magazinevoce.com.br/magazinewedconecta/ovo-de-pascoa-sonic-ovo-de-pascoa-com-pipoqueira-sonic-ovo-infantil-baunilha-confeitaria/p/ea5ga2c60h/ME/ODPA/",
+                    "imgPath": "C:\\Users\\guto7\\workspace\\anuncios\\temp\\toCreate\\2023-04-5\\img-for-create-video-post-1-image-1-ea5ga2c60h.jpeg"
+                },
+                {
+                    "title": "Ovo de Páscoa Sonic Ovo de Pascoa ao Leite Infantil 80G - Baunilha Confeotaria",
+                    "code": "jd76dgh1e7",
+                    "imgLink": "https://a-static.mlcdn.com.br/618x463/ovo-de-pascoa-sonic-ovo-de-pascoa-ao-leite-infantil-80g-baunilha-confeotaria/alphaeomega/59ab8ee2c44411ed8dc24201ac18502f/8e4a8551c6a1073d7a7e385d425c1eed.jpeg",
+                    "price": "R$ 32,79",
+                    "link": "https://www.magazinevoce.com.br/magazinewedconecta/ovo-de-pascoa-sonic-ovo-de-pascoa-ao-leite-infantil-80g-baunilha-confeotaria/p/jd76dgh1e7/ME/ODPA/",
+                    "imgPath": "C:\\Users\\guto7\\workspace\\anuncios\\temp\\toCreate\\2023-04-5\\img-for-create-video-post-1-image-2-jd76dgh1e7.jpeg"
+                },
+                {
+                    "title": "Ovo de Páscoa Bella's Pantufa Unicórnio 160g - Cacau Show",
+                    "code": "ej917fee62",
+                    "imgLink": "https://a-static.mlcdn.com.br/618x463/ovo-de-pascoa-bella-s-pantufa-unicornio-160g-cacau-show/cacaushow2/1002579/9982cfdd74b91e11283c12ac7342cdb1.jpeg",
+                    "price": "R$ 121,50",
+                    "link": "https://www.magazinevoce.com.br/magazinewedconecta/ovo-de-pascoa-bellas-pantufa-unicornio-160g-cacau-show/p/ej917fee62/ME/ODPA/",
+                    "imgPath": "C:\\Users\\guto7\\workspace\\anuncios\\temp\\toCreate\\2023-04-5\\img-for-create-video-post-1-image-3-ej917fee62.jpeg"
+                }
+            ]
+        }
+    ]
+}
