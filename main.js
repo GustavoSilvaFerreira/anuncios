@@ -2,14 +2,16 @@ require('dotenv').config();
 const Ad = require('./ad');
 const adverts = new Ad();
 const dateFirstPost = {
-    day: 6,
-    month: 4,
-    year: 2023
+    day: 3,
+    month: 7,
+    year: 2024
 }
 adverts.step1FilesForCreateVideos(dateFirstPost);
-// adverts.step2FilesForTitleCommentsAndRenameVideos();
-// adverts.teste();
 
-const VideoService = require('./services/video.service');
-const videoService = new VideoService();
+// const VideoService = require('./services/video.service');
+// const videoService = new VideoService();
 // videoService.teste();
+
+// const YoutubeService = require('./services/youtube.service');
+// const youtubeService = new YoutubeService();
+// youtubeService.search('');

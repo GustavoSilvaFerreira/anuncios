@@ -7,6 +7,12 @@ const ENDPOINTS = Object.freeze({
     },
     wedConecta: {
         search: `${BASE_URL_PARCEIRO_MAGALU}${PATH_WED_CONECTA}/busca`
+    },
+    youtube: {
+        base: 'https://www.googleapis.com/youtube/v3',
+        videos: {
+            list: '/videos'
+        }
     }
 });
 
