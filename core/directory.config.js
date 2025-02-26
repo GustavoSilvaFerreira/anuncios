@@ -1,6 +1,7 @@
 
 const { join } = require('path');
 const RAIZ = join(__dirname, "../");
+const DIR_EXAMPLES = join(RAIZ, "examples");
 const DIR_FILES = join(RAIZ, "files");
 const DIR_FONT = join(DIR_FILES, "font");
 const DIR_VIDEOS = join(DIR_FILES, "videos");
@@ -11,6 +12,7 @@ const FILE_FOR_CREATE = join(DIR_FILES, 'forCreateAd.txt');
 // const DIR_VIDEOS = join(RAIZ, "../../", "Downloads");
 
 module.exports = {
+    DIR_EXAMPLES,
     DIR_TO_POST,
     DIR_TO_CREATE,
     DIR_TEMP,

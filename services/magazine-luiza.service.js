@@ -2,12 +2,12 @@ const RestService = require('./rest.service');
 const ENDPOINTS = require('../core/url.config');
 const File = require('../services/file.service');
 const cheerio = require('cheerio');
-const { DIR_TEMP } = require('../core/directory.config');
+const { DIR_EXAMPLES } = require('../core/directory.config');
 
 class MagazineLuizaService {
     restService = null;
     imgSize = '618x463';
-    itensTagHtml = 'li.sc-leQnM';
+    itensTagHtml = 'li.sc-hwhrDX';
 
     constructor(
         restService = new RestService()
@@ -22,7 +22,7 @@ class MagazineLuizaService {
     async loadHtmlCheerio(codesFormated) {
         const result = await this.search(codesFormated);
         // console.log(result.data);
-        // await File.writeFile(`${DIR_TEMP}/html-teste.html`, result.data)
+        // await File.writeFile(`${DIR_EXAMPLES}/html-teste.html`, result.data);
         return cheerio.load(result.data);
     }
 
@@ -52,11 +52,11 @@ class MagazineLuizaService {
         const $ = await this.loadHtmlCheerio(codesFormated);
         const itensLi = await this.getListOfProductsByHtmlLoaded($);
         if(itensLi.length >= numberAdByPost) {
-            const itensImg = $(`${this.itensTagHtml} > a > div.sc-cDnByv > img`);
+            const itensImg = $(`${this.itensTagHtml} > a > div.sc-feNupb > img`);
             const itensHref = $(`${this.itensTagHtml} > a`);
-            let itensPrice = $(`${this.itensTagHtml} > a > div.sc-fvwjDU > div.sc-fqkvVR > div > div > p`);
+            let itensPrice = $(`${this.itensTagHtml} > a > div.sc-dxlmjS > div.sc-BQMaI > div > div > p`);
             if(!itensPrice) {
-                itensPrice = $(`${this.itensTagHtml} > a > div.sc-fvwjDU > div.sc-fqkvVR > div > p`);
+                itensPrice = $(`${this.itensTagHtml} > a > div.sc-dxlmjS > div.sc-BQMaI > div > p`);
             }
             const indexs = this.createIndexForValidation(itensLi.length);
             indexs.forEach(index => {

@@ -16,12 +16,12 @@ class Ad {
     videoService = null;
     numberAdByPost = 3;
     hours = [
-        '08:30',
-        '12:30',
-        '13:30',
-        '14:30',
-        '15:30',
-        '16:30',
+        // '08:30',
+        // '12:30',
+        // '13:30',
+        // '14:30',
+        // '15:30',
+        // '16:30',
         '18:30'
     ];
     numberPostsByDay = this.hours.length;
