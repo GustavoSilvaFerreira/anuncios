@@ -7,7 +7,7 @@ const { DIR_EXAMPLES } = require('../core/directory.config');
 class MagazineLuizaService {
     restService = null;
     imgSize = '618x463';
-    itensTagHtml = 'li.sc-hwhrDX';
+    itensTagHtml = 'li.sc-fHsjty';
 
     constructor(
         restService = new RestService()
@@ -22,7 +22,7 @@ class MagazineLuizaService {
     async loadHtmlCheerio(codesFormated) {
         const result = await this.search(codesFormated);
         // console.log(result.data);
-        // await File.writeFile(`${DIR_EXAMPLES}/html-teste.html`, result.data);
+        await File.writeFile(`${DIR_EXAMPLES}/html-teste.html`, result.data);
         return cheerio.load(result.data);
     }
 
@@ -51,22 +51,22 @@ class MagazineLuizaService {
         let products = [];
         const $ = await this.loadHtmlCheerio(codesFormated);
         const itensLi = await this.getListOfProductsByHtmlLoaded($);
+        // console.log({itensLi});
         if(itensLi.length >= numberAdByPost) {
-            const itensImg = $(`${this.itensTagHtml} > a > div.sc-feNupb > img`);
-            const itensHref = $(`${this.itensTagHtml} > a`);
-            let itensPrice = $(`${this.itensTagHtml} > a > div.sc-dxlmjS > div.sc-BQMaI > div > div > p`);
-            if(!itensPrice) {
-                itensPrice = $(`${this.itensTagHtml} > a > div.sc-dxlmjS > div.sc-BQMaI > div > p`);
-            }
+            const itensImg = $(`${this.itensTagHtml} img[data-testid="image"]`);
+            const itensHref = $(`${this.itensTagHtml} > a[data-testid="product-card-container"]`);
+            const itensTitle = $(`${this.itensTagHtml} h2[data-testid="product-title"]`);
+            const itensPrice = $(`${this.itensTagHtml} p[data-testid="price-value"]`);
             const indexs = this.createIndexForValidation(itensLi.length);
             indexs.forEach(index => {
                 if(index <= numberAdByPost) {
                     const href = itensHref[index].attribs['href'];
-                    const title = itensImg[index].attribs['title'];
+                    const title = $(itensTitle[index]).text().trim();
                     const link = `${ENDPOINTS.parceiroMagulu.base}${href}`;
                     const code = href.split('/')[4];
                     const imgLink = itensImg[index].attribs['src'].replace('280x210', this.imgSize);
-                    const price = itensPrice[index].children.filter(item => item.type === 'text')[0].data;
+                    const priceText = $(itensPrice[index]).text().trim();
+                    const price = priceText.replace('ou ', '').trim();
                     console.log({price});
                     products.push({title, code, imgLink, price, link});
                 }
@@ -83,16 +83,18 @@ class MagazineLuizaService {
             const itensLi = await this.getListOfProductsByHtmlLoaded($);
             console.log(itensLi);
             if(itensLi.length === numberAdByPost) {
-                const itensImg = $(`${this.itensTagHtml} > a > img`);
-                const itensTitleAndHref = $(`${this.itensTagHtml} > div > a`);
-                const itensPrice = $(`${this.itensTagHtml} > div > p > strong`);
+                const itensImg = $(`${this.itensTagHtml} img[data-testid="image"]`);
+                const itensTitleAndHref = $(`${this.itensTagHtml} > a[data-testid="product-card-container"]`);
+                const itensTitle = $(`${this.itensTagHtml} h2[data-testid="product-title"]`);
+                const itensPrice = $(`${this.itensTagHtml} p[data-testid="price-value"]`);
                 const indexs = this.createIndexForValidation(itensLi.length);
                 indexs.forEach(index => {
-                    const title = itensTitleAndHref[index].attribs['title'];
+                    const title = $(itensTitle[index]).text().trim();
                     const link = `${ENDPOINTS.parceiroMagulu.base}${itensTitleAndHref[index].attribs['href']}`;
-                    const code = itensLi[index].attribs['data-productid'];
-                    const imgLink = itensImg[index].attribs['data-original'].replace('160x160', this.imgSize);
-                    const price = itensPrice[index].children.filter(item => item.type === 'text')[0].data;
+                    const code = itensTitleAndHref[index].attribs['href'].split('/')[4];
+                    const imgLink = itensImg[index].attribs['src'].replace('280x210', this.imgSize);
+                    const priceText = $(itensPrice[index]).text().trim();
+                    const price = priceText.replace('ou ', '').trim();
                     console.log(imgLink);
                     products.push({title, code, imgLink, price, link});
                 });

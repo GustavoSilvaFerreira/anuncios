@@ -179,6 +179,8 @@ class VideoService {
                 if (result) console.log(`Vídeo ${post.titleVideo} criado com sucesso!`);
             } catch (error) {
                 console.log(`Error ao criar o video ${post.titleVideo} `);
+                console.error('Detalhes do erro:', error.message);
+                console.error('Stack:', error.stack);
             }
             count++;
         }

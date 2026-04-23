@@ -2,9 +2,9 @@ require('dotenv').config();
 const Ad = require('./ad');
 const adverts = new Ad();
 const dateFirstPost = {
-    day: 27,
-    month: 2,
-    year: 2025
+    day: 24,
+    month: 4,
+    year: 2026
 }
 adverts.step1FilesForCreateVideos(dateFirstPost);
 

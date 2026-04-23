@@ -117,6 +117,7 @@ class Ad {
             const codesFormated = codes.replace(/\//g, '');
             console.log('buscando ...', codesFormated);
             const codesIsValid = await this.magazineLuizaService.verifyCodes(codesFormated, this.numberAdByPost);
+            console.log('codesIsValid: ', codesIsValid);
             if (codesIsValid) {
                 tempContents.push(content);
                 if (tempContents.length === this.numberPostsByDay) {
@@ -229,6 +230,8 @@ class Ad {
                 if(result) console.log(`Vídeo ${titleVideo} criado com sucesso!`);
             } catch (error) {
                 console.log(`Error ao criar o video ${titleVideo} `);
+                console.error('Detalhes do erro:', error.message);
+                console.error('Stack:', error.stack);
             }
             count++;
         }
