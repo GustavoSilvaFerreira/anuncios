@@ -2,6 +2,8 @@ const { DIR_TEMP, DIR_FONT, DIR_TO_POST, DIR_VIDEOS } = require("../core/directo
 
 const { open, } = require('node:fs/promises');
 const fs = require('node:fs');
+const path = require('node:path');
+const os = require('node:os');
 const VideoLib = require('node-video-lib');
 const pathToFfmpeg = require('ffmpeg-static');
 const ffprobe = require('ffprobe-static');
@@ -206,6 +208,87 @@ class VideoService {
         }
     }
 
+    /**
+     * Valida dependências e recursos antes de criar vídeo
+     */
+    async validateInputs(post, outputPath) {
+        const errors = [];
+
+        // Validar imagens existem
+        for (const ad of post.ads) {
+            if (!fs.existsSync(ad.imgPath)) {
+                errors.push(`Imagem não encontrada: ${ad.imgPath}`);
+            }
+        }
+
+        // Validar que existem templates disponíveis
+        if (this.videosRandom.length === 0) {
+            this.setVideosRandom();
+        }
+
+        // Validar diretório de saída é gravável
+        const outputDir = path.dirname(outputPath);
+        if (!fs.existsSync(outputDir)) {
+            try {
+                fs.mkdirSync(outputDir, { recursive: true });
+            } catch (err) {
+                errors.push(`Não foi possível criar diretório de saída: ${outputDir} - ${err.message}`);
+            }
+        }
+
+        // Validar espaço em disco (mínimo 500MB)
+        const diskSpace = this.getAvailableDiskSpace();
+        if (diskSpace < 500 * 1024 * 1024) {
+            errors.push(`Espaço em disco insuficiente: ${(diskSpace / 1024 / 1024).toFixed(0)}MB disponível (requer 500MB)`);
+        }
+
+        if (errors.length > 0) {
+            throw new Error(`Validação falhou:\n${errors.join('\n')}`);
+        }
+    }
+
+    /**
+     * Obtém espaço em disco disponível
+     */
+    getAvailableDiskSpace() {
+        try {
+            const tmpDir = os.tmpdir();
+            const stats = fs.statfsSync(tmpDir);
+            return stats.bavail * stats.bsize;
+        } catch (err) {
+            console.warn('Não foi possível verificar espaço em disco:', err.message);
+            return Infinity; // Assume ilimitado se não conseguir verificar
+        }
+    }
+
+    /**
+     * Cria Promise com timeout
+     */
+    withTimeout(promise, timeoutMs, label = 'operação') {
+        return Promise.race([
+            promise,
+            new Promise((_, reject) =>
+                setTimeout(() => reject(new Error(`${label} expirou após ${timeoutMs / 1000}s`)), timeoutMs)
+            )
+        ]);
+    }
+
+    /**
+     * Limpa arquivo temporário
+     */
+    async cleanupTempFile(tempPath) {
+        try {
+            if (tempPath && fs.existsSync(tempPath)) {
+                await fs.promises.unlink(tempPath);
+                console.log(`[VideoService] Arquivo temporário removido: ${tempPath}`);
+            }
+        } catch (err) {
+            console.warn(`[VideoService] Erro ao remover arquivo temporário: ${err.message}`);
+        }
+    }
+
+
+
     setVideosRandom() {
         Object.keys(this.VIDEOS_CONFIG).forEach(template => {
             return Object.keys(this.VIDEOS_CONFIG[template].templateColor).forEach(templateColor => {
@@ -218,11 +301,29 @@ class VideoService {
     }
 
     getTemplateVideoSelected() {
+        // Proteger contra fila vazia
+        if (this.videosRandom.length === 0) {
+            this.setVideosRandom();
+        }
+
         const randomNumber = Math.floor(Math.random() * this.videosRandom.length);
         const keyVideoRandom = randomNumber > (this.videosRandom.length - 1) ? 0 : randomNumber;
         const videoTemplateSelected = this.videosRandom[keyVideoRandom];
+        
+        if (!videoTemplateSelected) {
+            throw new Error('Nenhum template de vídeo disponível');
+        }
+        
         const template = this.VIDEOS_CONFIG[videoTemplateSelected.template];
+        if (!template) {
+            throw new Error(`Template ${videoTemplateSelected.template} não encontrado na configuração`);
+        }
+        
         const templateColorSelected = template.templateColor[videoTemplateSelected.templateColor];
+        if (!templateColorSelected) {
+            throw new Error(`Cor de template ${videoTemplateSelected.templateColor} não encontrada`);
+        }
+        
         this.videosRandom.splice(keyVideoRandom, 1);
         return { template, templateColorSelected };
     }
@@ -426,18 +527,97 @@ class VideoService {
             'copy',
             '-y', `${pathVideoOut}`
         ];
-        // console.log(arrayFfmepg);
-        return new Promise((resolve, reject) => {
-            const resultVideo = spawn(pathToFfmpeg, arrayFfmepg);
-            resultVideo.on('close', function (code) {
-                // console.log('on: ', code);
-                // console.log('end create video...');
-                if (code == 1) {
-                    reject(false);
-                }
-                resolve(true);
-            });
-        });
+        
+        // Primeira fase: validação
+        await this.validateInputs(post, pathVideoOut);
+        
+        // Segunda fase: criar com arquivo temporário como backup
+        // Usar nome seguro sem caracteres especiais para evitar erros com FFmpeg no Windows
+        const hash = Math.random().toString(36).substr(2, 9);
+        const outputDir = path.dirname(pathVideoOut);
+        const tempPath = path.join(outputDir, `.tmp_${hash}.mp4`);
+        const arrayFfmepgWithTmp = arrayFfmepg.slice();
+        arrayFfmepgWithTmp[arrayFfmepgWithTmp.length - 1] = tempPath; // output para arquivo temp
+        
+        console.log(`[VideoService] Iniciando FFmpeg para: ${pathVideoOut}`);
+        console.log(`[VideoService] Inputs: ${arrayFfmepgWithTmp.filter(arg => arg === '-i').length} imagens`);
+
+        return this.withTimeout(
+            new Promise(async (resolve, reject) => {
+                const resultVideo = spawn(pathToFfmpeg, arrayFfmepgWithTmp);
+                let ffmpegOutput = '';
+                let ffmpegError = '';
+
+                // Capturar stdout para logging
+                resultVideo.stdout?.on('data', (data) => {
+                    ffmpegOutput += data.toString();
+                });
+
+                // Capturar stderr (erros e progresso do FFmpeg)
+                resultVideo.stderr?.on('data', (data) => {
+                    ffmpegError += data.toString();
+                    // Log apenas se contém frame (progresso)
+                    if (data.toString().includes('frame=')) {
+                        const match = data.toString().match(/frame=\s*(\d+)/);
+                        if (match) {
+                            process.stdout.write(`\r[VideoService] Progresso: ${match[1]} frames`);
+                        }
+                    }
+                });
+
+                // Capturar erro do processo
+                resultVideo.on('error', (error) => {
+                    console.log(''); // Nova linha após progresso
+                    console.error(`[VideoService] Erro ao iniciar FFmpeg: ${error.message}`);
+                    this.cleanupTempFile(tempPath);
+                    reject(new Error(`FFmpeg processo falhou: ${error.message}`));
+                });
+
+                // Quando o processo fecha
+                resultVideo.on('close', async (code) => {
+                    console.log(''); // Nova linha após progresso
+
+                    if (code === 0) {
+                        // Sucesso: mover temp para final
+                        try {
+                            await fs.promises.rename(tempPath, pathVideoOut);
+                            console.log(`[VideoService] ✓ Vídeo criado com sucesso: ${pathVideoOut}`);
+                            resolve(true);
+                        } catch (err) {
+                            console.error(`[VideoService] Erro ao mover arquivo temporário: ${err.message}`);
+                            await this.cleanupTempFile(tempPath);
+                            reject(new Error(`Falha ao finalizar vídeo: ${err.message}`));
+                        }
+                    } else {
+                        // Falha: extrair informação útil do stderr
+                        console.error(`[VideoService] FFmpeg exited with code ${code}`);
+                        let errorMsg = `FFmpeg exited with code ${code}`;
+                        
+                        // Tentar extrair erro específico
+                        if (ffmpegError.includes('Unknown encoder')) {
+                            errorMsg = 'Encoder libx264 não disponível';
+                        } else if (ffmpegError.includes('No such file or directory')) {
+                            errorMsg = 'Arquivo de entrada não encontrado';
+                        } else if (ffmpegError.includes('File format not recognised')) {
+                            errorMsg = 'Formato de arquivo não reconhecido';
+                        } else if (ffmpegError.length > 0) {
+                            // Pegar última linha de erro
+                            const errorLines = ffmpegError.split('\n').filter(l => l.length > 0);
+                            if (errorLines.length > 0) {
+                                errorMsg = errorLines[errorLines.length - 1];
+                            }
+                        }
+                        
+                        console.error(`[VideoService] Erro: ${errorMsg}`);
+                        await this.cleanupTempFile(tempPath);
+                        reject(new Error(errorMsg));
+                    }
+                });
+            }),
+            120000, // 2 minutos de timeout
+            'Criação de vídeo FFmpeg'
+        );
+
 
         // spawn(pathToFfmpeg, [
         //     '-i', filePath,

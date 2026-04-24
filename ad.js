@@ -8,6 +8,7 @@ const { join } = require('path');
 // const pathVideos = join(__dirname, "../../", "Downloads");
 const adJson = require('./ad.json');
 const { DIR_TO_POST, DIR_TEMP, DIR_VIDEOS, FILE_FOR_CREATE, DIR_TO_CREATE } = require('./core/directory.config');
+const VideoQueue = require('./services/video-queue.service');
 const ENDPOINTS = require('./core/url.config');
 const VideoService = require('./services/video.service');
 
@@ -171,7 +172,7 @@ class Ad {
                         const imgName = `img-for-create-video-post-${countPost}-image-${countProduct}-${product.code}`;
                         const pathImg = join(pathDateTitle, `${imgName}.${ext}`);
                         product['imgPath'] = pathImg;
-                        this.downloadImg(linkImg, pathImg);
+                        await this.downloadImg(linkImg, pathImg);
                         print += `${product.title}\n${product.price}\n${product.code}\n${pathImg}\n${product.link}\n\n`;
                         countProduct++;
                     }
@@ -220,21 +221,57 @@ class Ad {
         const pathDateTitle = join(DIR_TO_POST, datePost);
         const dirDateExists = File.existsSync(pathDateTitle);
         if (!dirDateExists) await File.mkdir(pathDateTitle);
+
+        console.log(`\n${'='.repeat(60)}`);
+        console.log(`[Criação de Vídeos] Processando ${postDay.posts.length} vídeos para ${datePost}`);
+        console.log(`${'='.repeat(60)}\n`);
+
+        // Criar fila de processamento com retry automático
+        const queue = new VideoQueue(this.videoService, 1); // 1 = serializado (um por vez)
+
+        // Adicionar cada vídeo à fila
         let count = 1;
         for (const post of postDay.posts) {
             const { titlePost, titleVideo } = post;
-            try {
-                const fileVideoName = `${count}_${titlePost}_${randomUUID()}.mp4`;
-                const pathPostVideo = join(pathDateTitle, fileVideoName);
-                const result = await this.videoService.createVideo(post, pathPostVideo);
-                if(result) console.log(`Vídeo ${titleVideo} criado com sucesso!`);
-            } catch (error) {
-                console.log(`Error ao criar o video ${titleVideo} `);
-                console.error('Detalhes do erro:', error.message);
-                console.error('Stack:', error.stack);
-            }
+            const fileVideoName = `${count}_${titlePost}_${randomUUID()}.mp4`;
+            const pathPostVideo = join(pathDateTitle, fileVideoName);
+
+            queue.addTask(post, pathPostVideo, {
+                maxRetries: 3, // Tentará 3 vezes
+                onProgress: (event) => {
+                    if (event.status === 'completed') {
+                        console.log(`[Success] ${titleVideo} foi criado com sucesso!`);
+                    }
+                },
+                onError: (event) => {
+                    if (event.status === 'failed') {
+                        console.error(`[Failed] ${titleVideo} não pôde ser criado após ${event.attempt} tentativas: ${event.error.message}`);
+                    }
+                }
+            });
+
             count++;
         }
+
+        // Processar a fila
+        const result = await queue.process();
+
+        // Resumo final
+        console.log(`\n${'='.repeat(60)}`);
+        if (result.success) {
+            console.log(`✓ Todos os vídeos foram criados com sucesso!`);
+        } else {
+            console.log(`✗ ${result.stats.failed} vídeo(s) falharam após retries automáticos`);
+            console.log(`   Para reprocessar falhas, execute novamente o comando`);
+        }
+        console.log(`\nResumo:`);
+        console.log(`  - Sucesso: ${result.stats.completed}`);
+        console.log(`  - Falhas: ${result.stats.failed}`);
+        console.log(`  - Retries: ${result.stats.retried}`);
+        console.log(`  - Tempo total: ${result.stats.duration}`);
+        console.log(`${'='.repeat(60)}\n`);
+
+        return result;
     }
 
     async step2FilesForTitleAndComments(postDay) {

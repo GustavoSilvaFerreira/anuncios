@@ -1,12 +1,21 @@
 require('dotenv').config();
 const Ad = require('./ad');
-const adverts = new Ad();
-const dateFirstPost = {
-    day: 24,
-    month: 4,
-    year: 2026
-}
-adverts.step1FilesForCreateVideos(dateFirstPost);
+
+(async () => {
+    const adverts = new Ad();
+    const dateFirstPost = {
+        day: 26,
+        month: 4,
+        year: 2026
+    }
+    try {
+        await adverts.step1FilesForCreateVideos(dateFirstPost);
+        process.exit(0);
+    } catch (error) {
+        console.error('Erro fatal:', error.message);
+        process.exit(1);
+    }
+})();
 
 // const VideoService = require('./services/video.service');
 // const videoService = new VideoService();
