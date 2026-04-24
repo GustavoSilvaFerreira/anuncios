@@ -1,10 +1,10 @@
 require('dotenv').config();
-const Ad = require('./ad');
+const { Ad } = require('./src');
 
 (async () => {
     const adverts = new Ad();
     const dateFirstPost = {
-        day: 26,
+        day: 27,
         month: 4,
         year: 2026
     }

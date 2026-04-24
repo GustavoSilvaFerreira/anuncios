@@ -1,6 +1,6 @@
 const fs = require('fs');
 const { readFile, writeFile, mkdir, readdir, rename } = require('fs/promises');
-const { error } = require('../core/constants');
+const { error } = require('../../../config/constants');
 
 // const DEFAULT_OPTIONS = {
 //     maxLines: 3,

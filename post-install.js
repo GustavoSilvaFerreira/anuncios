@@ -1,5 +1,5 @@
-const File = require('./services/file.service');
-const { DIR_TO_CREATE, DIR_TO_POST, DIR_TEMP } = require('./core/directory.config');
+const { File } = require('./src/modules/storage');
+const { DIR_TO_CREATE, DIR_TO_POST, DIR_TEMP } = require('./src/config/directory.config');
 
 async function run() {
     if(!File.existsSync(DIR_TEMP)) {

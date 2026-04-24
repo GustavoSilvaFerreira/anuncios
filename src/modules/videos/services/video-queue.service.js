@@ -40,7 +40,7 @@ class VideoQueue {
             attempts: 0,
             onProgress,
             onError,
-            status: 'pending', // pending, processing, completed, failed
+            status: 'pending',
             error: null,
             startTime: null,
             endTime: null
@@ -60,7 +60,6 @@ class VideoQueue {
 
         const promises = [];
 
-        // Iniciar workers baseado em maxConcurrent
         for (let i = 0; i < this.maxConcurrent; i++) {
             promises.push(this._processWorker());
         }
@@ -68,7 +67,6 @@ class VideoQueue {
         await Promise.all(promises);
         this.stats.endTime = Date.now();
 
-        // Log final
         const duration = ((this.stats.endTime - this.stats.startTime) / 1000).toFixed(2);
         console.log(`[VideoQueue] Fila concluída em ${duration}s`);
         console.log(`[VideoQueue] Resumo: ${this.stats.completed} sucesso, ${this.stats.failed} falhas, ${this.stats.retried} retries`);
@@ -130,7 +128,6 @@ class VideoQueue {
                 task.endTime = Date.now();
 
                 if (task.attempts < maxRetries) {
-                    // Retry com backoff exponencial
                     const delay = Math.pow(2, task.attempts - 1) * 1000;
                     console.log(`[VideoQueue] ✗ ${id} falhou na tentativa ${task.attempts}. Aguardando ${delay}ms antes de retry...`);
                     console.log(`[VideoQueue] Erro: ${error.message}`);
@@ -140,7 +137,6 @@ class VideoQueue {
 
                     await this._delay(delay);
                 } else {
-                    // Máximo de tentativas alcançado
                     task.status = 'failed';
                     this.stats.failed++;
 

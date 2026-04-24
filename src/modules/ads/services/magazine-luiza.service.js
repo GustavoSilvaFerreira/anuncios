@@ -1,8 +1,8 @@
-const RestService = require('./rest.service');
-const ENDPOINTS = require('../core/url.config');
-const File = require('../services/file.service');
+const RestService = require('../../storage/services/rest.service');
+const ENDPOINTS = require('../../../config/url.config');
+const File = require('../../storage/services/file.service');
 const cheerio = require('cheerio');
-const { DIR_EXAMPLES } = require('../core/directory.config');
+const { DIR_EXAMPLES } = require('../../../config/directory.config');
 
 class MagazineLuizaService {
     restService = null;

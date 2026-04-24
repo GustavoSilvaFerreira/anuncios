@@ -1,28 +1,19 @@
 const { randomUUID } = require('crypto');
-const MagazineLuizaService = require('./services/magazine-luiza.service');
-const RestService = require('./services/rest.service');
-const File = require('./services/file.service');
+const MagazineLuizaService = require('../services/magazine-luiza.service');
+const RestService = require('../../storage/services/rest.service');
+const File = require('../../storage/services/file.service');
 const { join } = require('path');
-// const DIR_TO_POST = join(__dirname, "./", "toPost");
-// const DIR_TEMP = join(__dirname, "./", "temp");
-// const pathVideos = join(__dirname, "../../", "Downloads");
-const adJson = require('./ad.json');
-const { DIR_TO_POST, DIR_TEMP, DIR_VIDEOS, FILE_FOR_CREATE, DIR_TO_CREATE } = require('./core/directory.config');
-const VideoQueue = require('./services/video-queue.service');
-const ENDPOINTS = require('./core/url.config');
-const VideoService = require('./services/video.service');
+const adJson = require('../ad.json');
+const { DIR_TO_POST, DIR_TEMP, DIR_VIDEOS, FILE_FOR_CREATE, DIR_TO_CREATE } = require('../../../config/directory.config');
+const VideoQueue = require('../../videos/services/video-queue.service');
+const ENDPOINTS = require('../../../config/url.config');
+const VideoService = require('../../videos/services/video.service');
 
 class Ad {
     magazineLuizaService = null;
     videoService = null;
     numberAdByPost = 3;
     hours = [
-        // '08:30',
-        // '12:30',
-        // '13:30',
-        // '14:30',
-        // '15:30',
-        // '16:30',
         '18:30'
     ];
     numberPostsByDay = this.hours.length;
@@ -78,7 +69,6 @@ class Ad {
                     }
                 }
             }
-            // TODO: Salvar item em um arquivo como item que falta informação
             return false;
         }).filter(item => item !== false);
     }
@@ -86,11 +76,6 @@ class Ad {
     validateThreeCodesForCreate(codesString) {
         return codesString.split('+').length === this.numberAdByPost;
     }
-    // filterThreeCodesForCreate(contentArray) {
-    //     return contentArray.filter(item => {
-    //         return item.split('+').length === this.numberAdByPost;
-    //     });
-    // }
 
     getExtension(linkImg) {
         const imgSplit = linkImg.split('.');
@@ -98,7 +83,6 @@ class Ad {
     }
 
     downloadImg(linkImg, filePath) {
-        // console.log('download img: ', linkImg, filePath);
         return this.restService.downloadImage(linkImg, filePath);
     }
 
@@ -111,10 +95,7 @@ class Ad {
         const contentFileSplited = await File.txtForArrayString(FILE_FOR_CREATE);
         const contents = this.separateCodeTitleAdTitlePostAndHashtag(contentFileSplited);
         for (const content of contents) {
-            // console.log(content);
             const { codes, titleAd, titlePost, hashtag } = content;
-            // const contentFiltered = this.filterThreeCodesForCreate(content.code);
-            // for (const content of contentFiltered) {
             const codesFormated = codes.replace(/\//g, '');
             console.log('buscando ...', codesFormated);
             const codesIsValid = await this.magazineLuizaService.verifyCodes(codesFormated, this.numberAdByPost);
@@ -132,16 +113,12 @@ class Ad {
             } else {
                 codeInvalid.push(content);
             }
-            // }
         }
-
-        // console.log({contentsForCreatePosts});
 
         if (contentsForCreatePosts.length > 0) {
             const dirExists = File.existsSync(DIR_TO_CREATE);
             if (!dirExists) await File.mkdir(DIR_TO_CREATE);
             for (const postsDay of contentsForCreatePosts) {
-                // console.log(post);
                 const { date } = postsDay;
                 const dateSplit = date.split('-');
                 const day = Number(dateSplit[2]);
@@ -191,26 +168,18 @@ class Ad {
                 const pathTxtForCreateVideo = join(pathDateTitle, `for-create-videos.txt`);
                 await File.writeFile(pathTxtForCreateVideo, print);
 
-                // TODO: Chamar função para criar os videos
                 await this.createVideos(postDay);
-                // TODO: Chamar função para criar txt com informações do post (usar arquivo json criado acima)
                 await this.step2FilesForTitleAndComments(postDay);
             }
         }
 
         if (tempContents.length > 0) {
-            // TODO: Códigos que não atingiram a quantidade necessária para os posts do dia
-            // TODO: Manter esses códigos não utilizados em forCreateAd.txt
+            console.log('Códigos não atingiram a quantidade necessária:', tempContents);
         }
 
         if (codeInvalid.length > 0) {
-            // TODO: remover linha do arquivo forCreateAd.txt
-            // Talvez adicionar em um arquivo de códigos não utilizados!
-            // await writeFile(join(DIR_SERVICES, '../temp/', `codeInvalid.txt`), codeInvalid.join('\n'));
+            console.log('Códigos inválidos:', codeInvalid);
         }
-        // console.log('codesForCreatePosts: ', codesForCreatePosts);
-        console.log({ tempContents });
-        console.log({ codeInvalid });
     }
 
     async createVideos(postDay) {
@@ -226,10 +195,8 @@ class Ad {
         console.log(`[Criação de Vídeos] Processando ${postDay.posts.length} vídeos para ${datePost}`);
         console.log(`${'='.repeat(60)}\n`);
 
-        // Criar fila de processamento com retry automático
-        const queue = new VideoQueue(this.videoService, 1); // 1 = serializado (um por vez)
+        const queue = new VideoQueue(this.videoService, 1);
 
-        // Adicionar cada vídeo à fila
         let count = 1;
         for (const post of postDay.posts) {
             const { titlePost, titleVideo } = post;
@@ -237,7 +204,7 @@ class Ad {
             const pathPostVideo = join(pathDateTitle, fileVideoName);
 
             queue.addTask(post, pathPostVideo, {
-                maxRetries: 3, // Tentará 3 vezes
+                maxRetries: 3,
                 onProgress: (event) => {
                     if (event.status === 'completed') {
                         console.log(`[Success] ${titleVideo} foi criado com sucesso!`);
@@ -253,10 +220,8 @@ class Ad {
             count++;
         }
 
-        // Processar a fila
         const result = await queue.process();
 
-        // Resumo final
         console.log(`\n${'='.repeat(60)}`);
         if (result.success) {
             console.log(`✓ Todos os vídeos foram criados com sucesso!`);
@@ -309,216 +274,16 @@ class Ad {
 
             const fileName = `${count}_${titlePost}_${randomUUID()}.txt`;
             await File.writeFile(join(pathDateTitle, fileName), content);
-            // const videoName = `${datePost}_${count}_${titlePost}`;
-            // this.updateVideosName(count, videoName, videosFiltered);
             count++;
         }
     }
-    // async step1FilesForCreateVideos(dateFirstPost) {
-    //     let tempCodes = [];
-    //     const codesForCreatePosts = [];
-    //     const codeInvalid = [];
-    //     let { year, month, day } = dateFirstPost;
-    //     let datePost = this.getDate(year, month, day);
-    //     const contentFileSplited = await File.txtForArrayString(FILE_FOR_CREATE);
-    //     const contents = this.separateCodeTitleAdTitlePostAndHashtag(contentFileSplited);
-    //     for (const content of contents) {
-
-
-    //     }
-    //     const contentFiltered = this.filterThreeCodesForCreate(content);
-    //     for (const content of contentFiltered) {
-    //         const codesFormated = content.replace(/\//g, '');
-    //         console.log('buscando ...', codesFormated);
-    //         const codesIsValid = await this.magazineLuizaService.verifyCodes(codesFormated, this.numberAdByPost);
-    //         if (codesIsValid) {
-    //             tempCodes.push(codesFormated);
-    //             if (tempCodes.length === this.numberPostsByDay) {
-    //                 codesForCreatePosts.push({
-    //                     date: this.getDateFormated(datePost),
-    //                     codes: tempCodes,
-    //                     products: []
-    //                 });
-    //                 tempCodes = [];
-    //                 datePost = this.getDatePlusDay(datePost, 1);
-    //             }
-    //         } else {
-    //             codeInvalid.push(codesFormated);
-    //         }
-    //     }
-
-    //     if (codesForCreatePosts.length > 0) {
-    //         for (const itens of codesForCreatePosts) {
-    //             const allProducts = await this.magazineLuizaService.getProducts(itens.codes, this.numberAdByPost);
-    //             itens.products = allProducts;
-    //             let print = `Posts do dia ${itens.date}\n\n`;
-    //             print += itens.products.map((product, key) => {
-    //                 const productsPost = product.map((item, keyProduct) => {
-    //                     const linkImg = item.img;
-    //                     const ext = this.getExtension(linkImg);
-    //                     const imgName = `${itens.date}-Step-1-Post-${key + 1}-Image-${keyProduct + 1}-${item.code}`;
-    //                     this.downloadImg(linkImg, `${DIR_TO_CREATE}/${imgName}.${ext}`)
-    //                     // TODO: criar obj json para criar video
-    //                     return `${item.title}\n${item.price}\n${item.code}\n${imgName}\n${item.link}`;
-    //                 }).join('\n\n');
-    //                 return `POST ${key + 1}\n\n${productsPost}`;
-    //             }).join('\n\n');
-    //             await File.writeFile(join(DIR_TO_CREATE, `${itens.date}-Step-1-Create-videos.txt`), print);
-    //             const dateSplit = itens.date.split('-');
-    //             const fileAd = {
-    //                 date: {
-    //                     day: Number(dateSplit[2]),
-    //                     month: Number(dateSplit[1]),
-    //                     year: Number(dateSplit[0])
-    //                 },
-    //                 ad: itens.products.map(product => {
-    //                     return {
-    //                         title: 'Seleção de',
-    //                         codes: product.map(item => item.code),
-    //                         hashtags: []
-    //                     }
-    //                 })
-    //             }
-    //             await File.writeFile(join(DIR_TO_CREATE, `${itens.date}-Step-2-Ad.json`), JSON.stringify(fileAd));
-    //         }
-    //     }
-
-    //     if (tempCodes.length > 0) {
-    //         // TODO: Códigos que não atingiram a quantidade necessária para os posts do dia
-    //         // TODO: Manter esses códigos não utilizados em forCreateAd.txt
-    //     }
-
-    //     if (codeInvalid.length > 0) {
-    //         // TODO: remover linha do arquivo forCreateAd.txt
-    //         // Talvez adicionar em um arquivo de códigos não utilizados!
-    //         // await writeFile(join(DIR_SERVICES, '../temp/', `codeInvalid.txt`), codeInvalid.join('\n'));
-    //     }
-    //     // console.log('codesForCreatePosts: ', codesForCreatePosts);
-    //     console.log({ tempCodes });
-    //     console.log({ codeInvalid });
-    // }
-
-    // async step2FilesForTitleCommentsAndRenameVideos() {
-    //     const itensDir = await File.readdir(DIR_VIDEOS);
-    //     const videosFiltered = itensDir.filter(item => {
-    //         return ['1.mp4', '2.mp4', '3.mp4', '4.mp4'].includes(item);
-    //     });
-    //     const dirExists = File.existsSync(DIR_TO_POST);
-    //     if (!dirExists) File.mkdir(DIR_TO_POST);
-    //     let count = 1;
-
-    //     for (const anuncio of this.anuncios.ad) {
-    //         const linkProducts = this.linkBaseSearchProducts(anuncio.codes);
-    //         const { date: { year, month, day } } = this.anuncios;
-    //         const { title, hashtags } = anuncio;
-    //         const youtube = this.getYoutubeDescription(title, linkProducts, hashtags);
-    //         const tiktok = this.getTiktokDescription(title, hashtags);
-    //         const meta = this.getMetaDescription(title, hashtags);
-    //         const datePost = this.getDateFormated(this.getDate(year, month, day));
-
-    //         const pathDateTitle = join(DIR_TO_POST, datePost);
-    //         const dirDateExists = File.existsSync(pathDateTitle);
-    //         if (!dirDateExists) File.mkdir(pathDateTitle);
-
-    //         const content = [`Postar nos horários: ${this.hours.join(' - ')}\n\n`];
-    //         content.push(`${datePost} ${title}\n`);
-    //         content.push(`${linkProducts}\n\n`);
-    //         content.push('******************************************** YOUTUBE\n');
-    //         content.push(youtube.title);
-    //         content.push(youtube.description);
-    //         content.push('\n\n');
-    //         content.push('******************************************** META REELS\n');
-    //         content.push(meta);
-    //         content.push('\n\n');
-    //         content.push('******************************************** TIKTOK\n');
-    //         content.push(tiktok);
-
-    //         const fileName = `${count}_${title}_${randomUUID()}.txt`;
-    //         await File.writeFile(join(pathDateTitle, fileName), content);
-    //         this.createVideo(pathDateTitle, fileName);
-    //         // const videoName = `${datePost}_${count}_${title}`;
-    //         // this.updateVideosName(count, videoName, videosFiltered);
-    //         count++;
-    //     }
-    // }
-
-    // createVideo(pathDateTitle, videoName) {
-    //     const post = {
-    //         title: 'Seleção ovo de páscoa',
-    //         ads: {
-    //             '1': {
-    //                 title: 'Chocolate nest nestl em barras 100gr Chocolate nestle em barras 100gr Chocolate nestle em barras 100gr Chocolate nest nestl em barras 100gr Chocolate nestle em barras 100gr Chocolate nestle em barras 100gr',
-    //                 price: 'R$ 1.259,99',
-    //                 code: 'a4f65465dsaf',
-    //                 imgName: 'product1.jpeg'
-    //             },
-    //             '2': {
-    //                 title: 'Chocolate garoto 250gr Chocolate garoto barras 250gr',
-    //                 price: 'R$ 89,00',
-    //                 code: 'ej51b65heg',
-    //                 imgName: 'product2.jpeg'
-    //             },
-    //             '3': {
-    //                 title: 'Chocolate talento em barras 150gr',
-    //                 price: 'R$ 29,99',
-    //                 code: 'ag5g4dd21b',
-    //                 imgName: 'product3.jpeg'
-    //             }
-    //         }
-    //     }
-    //     this.videoService.createVideo(post, join(pathDateTitle, `${videoName}.mp4`));
-    // }
-    // async step2FilesForTitleCommentsAndRenameVideos() {
-    //     const itensDir = await File.readdir(DIR_VIDEOS);
-    //     const videosFiltered = itensDir.filter(item => {
-    //         return ['1.mp4', '2.mp4', '3.mp4', '4.mp4'].includes(item);
-    //     });
-    //     const dirExists = File.existsSync(DIR_TO_POST);
-    //     if (!dirExists) await File.mkdir(DIR_TO_POST);
-    //     let count = 1;
-
-    //     for (const anuncio of this.anuncios.ad) {
-    //         const linkProducts = this.linkBaseSearchProducts(anuncio.codes);
-    //         const { date: { year, month, day } } = this.anuncios;
-    //         const { title, hashtags } = anuncio;
-    //         const youtube = this.getYoutubeDescription(title, linkProducts, hashtags);
-    //         const tiktok = this.getTiktokDescription(title, hashtags);
-    //         const meta = this.getMetaDescription(title, hashtags);
-    //         const datePost = this.getDateFormated(this.getDate(year, month, day));
-
-    //         const pathDateTitle = join(DIR_TO_POST, datePost);
-    //         const dirDateExists = File.existsSync(pathDateTitle);
-    //         if (!dirDateExists) await File.mkdir(pathDateTitle);
-
-    //         const content = [`Postar nos horários: ${this.hours.join(' - ')}\n\n`];
-    //         content.push(`${datePost} ${title}\n`);
-    //         content.push(`${linkProducts}\n\n`);
-    //         content.push('******************************************** YOUTUBE\n');
-    //         content.push(youtube.title);
-    //         content.push(youtube.description);
-    //         content.push('\n\n');
-    //         content.push('******************************************** META REELS\n');
-    //         content.push(meta);
-    //         content.push('\n\n');
-    //         content.push('******************************************** TIKTOK\n');
-    //         content.push(tiktok);
-
-    //         const fileName = `${count}_${title}_${randomUUID()}.txt`;
-    //         await File.writeFile(join(pathDateTitle, fileName), content);
-    //         const videoName = `${datePost}_${count}_${title}`;
-    //         this.updateVideosName(count, videoName, videosFiltered);
-    //         count++;
-    //     }
-    // }
 
     getTiktokDescription(titleComom, hashtags) {
-        // Tiktok
         const title = `${titleComom} - Link na BIO #parceiromagalu #achadinhos #promo #promotion #sale ${hashtags.join(' ')}`
         return title;
     }
 
     getYoutubeDescription(titleComom, linkProducts, hashtags) {
-        // YouTube
         const title = `${titleComom} #shorts da @wedconecta\n\n`;
         let description = `Link para os produtos: ${linkProducts}\n\n`;
         description += `Siga nossas redes sociais:\n`;
@@ -532,7 +297,6 @@ class Ad {
     }
 
     getMetaDescription(titleComom, hashtags) {
-        // Instagram e Facebook
         let description = `${titleComom}\nLink da loja na BIO\n\n`;
         description += `Siga nossas redes sociais:\n`;
         description += `YouTube: https://www.youtube.com/@wedconecta\n`;

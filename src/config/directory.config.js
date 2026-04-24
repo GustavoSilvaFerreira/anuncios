@@ -1,6 +1,7 @@
 
 const { join } = require('path');
-const RAIZ = join(__dirname, "../");
+// Raiz do projeto é 2 níveis acima (src/config -> projeto)
+const RAIZ = join(__dirname, "../../");
 const DIR_EXAMPLES = join(RAIZ, "examples");
 const DIR_FILES = join(RAIZ, "files");
 const DIR_FONT = join(DIR_FILES, "font");
@@ -18,5 +19,6 @@ module.exports = {
     DIR_TEMP,
     DIR_VIDEOS,
     FILE_FOR_CREATE,
-    DIR_FONT
-}
+    DIR_FONT,
+    DIR_FILES
+};
