@@ -8,6 +8,7 @@ const { DIR_TO_POST, DIR_TEMP, DIR_VIDEOS, FILE_FOR_CREATE, DIR_TO_CREATE } = re
 const VideoQueue = require('../../videos/services/video-queue.service');
 const ENDPOINTS = require('../../../config/url.config');
 const VideoService = require('../../videos/services/video.service');
+const { Logger, ValidationUtils, StringUtils, HashtagUtils } = require('../../../shared/utils');
 
 class Ad {
     magazineLuizaService = null;
@@ -74,12 +75,11 @@ class Ad {
     }
 
     validateThreeCodesForCreate(codesString) {
-        return codesString.split('+').length === this.numberAdByPost;
+        return ValidationUtils.validateThreeCodesForCreate(codesString, this.numberAdByPost);
     }
 
     getExtension(linkImg) {
-        const imgSplit = linkImg.split('.');
-        return imgSplit[imgSplit.length - 1];
+        return StringUtils.getExtension(linkImg);
     }
 
     downloadImg(linkImg, filePath) {
@@ -96,10 +96,10 @@ class Ad {
         const contents = this.separateCodeTitleAdTitlePostAndHashtag(contentFileSplited);
         for (const content of contents) {
             const { codes, titleAd, titlePost, hashtag } = content;
-            const codesFormated = codes.replace(/\//g, '');
-            console.log('buscando ...', codesFormated);
+            const codesFormated = StringUtils.formatCodesRemoveSlash(codes);
+            Logger.info('Buscando códigos:', codesFormated);
             const codesIsValid = await this.magazineLuizaService.verifyCodes(codesFormated, this.numberAdByPost);
-            console.log('codesIsValid: ', codesIsValid);
+            Logger.info(`Códigos válidos: ${codesIsValid}`);
             if (codesIsValid) {
                 tempContents.push(content);
                 if (tempContents.length === this.numberPostsByDay) {
@@ -157,7 +157,7 @@ class Ad {
                     postDay.posts.push({
                         titlePost,
                         titleVideo,
-                        hashtags: hashtag.split(' ').map(hashtag => hashtag.indexOf('#') > -1 ? hashtag : `#${hashtag}`),
+                        hashtags: HashtagUtils.normalizeHashtags(hashtag.split(' ')),
                         ads: allProducts
                     });
                     countPost++;
@@ -174,11 +174,11 @@ class Ad {
         }
 
         if (tempContents.length > 0) {
-            console.log('Códigos não atingiram a quantidade necessária:', tempContents);
+            Logger.warn('Códigos não atingiram a quantidade necessária', tempContents);
         }
 
         if (codeInvalid.length > 0) {
-            console.log('Códigos inválidos:', codeInvalid);
+            Logger.warn('Códigos inválidos', codeInvalid);
         }
     }
 
@@ -191,9 +191,7 @@ class Ad {
         const dirDateExists = File.existsSync(pathDateTitle);
         if (!dirDateExists) await File.mkdir(pathDateTitle);
 
-        console.log(`\n${'='.repeat(60)}`);
-        console.log(`[Criação de Vídeos] Processando ${postDay.posts.length} vídeos para ${datePost}`);
-        console.log(`${'='.repeat(60)}\n`);
+        Logger.section(`Criação de Vídeos - Processando ${postDay.posts.length} vídeos para ${datePost}`);
 
         const queue = new VideoQueue(this.videoService, 1);
 
@@ -207,12 +205,12 @@ class Ad {
                 maxRetries: 3,
                 onProgress: (event) => {
                     if (event.status === 'completed') {
-                        console.log(`[Success] ${titleVideo} foi criado com sucesso!`);
+                        Logger.success(`${titleVideo} foi criado com sucesso!`);
                     }
                 },
                 onError: (event) => {
                     if (event.status === 'failed') {
-                        console.error(`[Failed] ${titleVideo} não pôde ser criado após ${event.attempt} tentativas: ${event.error.message}`);
+                        Logger.error(`${titleVideo} não pôde ser criado após ${event.attempt} tentativas`, event.error);
                     }
                 }
             });
@@ -222,19 +220,19 @@ class Ad {
 
         const result = await queue.process();
 
-        console.log(`\n${'='.repeat(60)}`);
+        Logger.section('Resumo da Criação de Vídeos');
         if (result.success) {
-            console.log(`✓ Todos os vídeos foram criados com sucesso!`);
+            Logger.success('Todos os vídeos foram criados com sucesso!');
         } else {
-            console.log(`✗ ${result.stats.failed} vídeo(s) falharam após retries automáticos`);
-            console.log(`   Para reprocessar falhas, execute novamente o comando`);
+            Logger.warn(`${result.stats.failed} vídeo(s) falharam após retries automáticos`);
+            Logger.info('Para reprocessar falhas, execute novamente o comando');
         }
-        console.log(`\nResumo:`);
-        console.log(`  - Sucesso: ${result.stats.completed}`);
-        console.log(`  - Falhas: ${result.stats.failed}`);
-        console.log(`  - Retries: ${result.stats.retried}`);
-        console.log(`  - Tempo total: ${result.stats.duration}`);
-        console.log(`${'='.repeat(60)}\n`);
+        Logger.stats('Estatísticas', {
+            'Sucesso': result.stats.completed,
+            'Falhas': result.stats.failed,
+            'Retries': result.stats.retried,
+            'Tempo total': result.stats.duration
+        });
 
         return result;
     }

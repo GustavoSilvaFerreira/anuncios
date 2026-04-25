@@ -1,12 +1,16 @@
 require('dotenv').config();
 const { Ad } = require('./src');
+const { FILE_DATE_FIRST_POST } = require('./src/config/directory.config');
+const { File } = require('./src/modules/storage');
+const dateFirstPostTxt = File.getFileContentSync(FILE_DATE_FIRST_POST);
+const [day, month, year] = dateFirstPostTxt.split('/').map(Number);
 
 (async () => {
     const adverts = new Ad();
     const dateFirstPost = {
-        day: 27,
-        month: 4,
-        year: 2026
+        day,
+        month,
+        year
     }
     try {
         await adverts.step1FilesForCreateVideos(dateFirstPost);

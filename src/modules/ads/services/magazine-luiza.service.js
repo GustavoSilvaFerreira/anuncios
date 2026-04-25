@@ -3,6 +3,7 @@ const ENDPOINTS = require('../../../config/url.config');
 const File = require('../../storage/services/file.service');
 const cheerio = require('cheerio');
 const { DIR_EXAMPLES } = require('../../../config/directory.config');
+const { Logger, ArrayUtils, StringUtils, UrlUtils } = require('../../../shared/utils');
 
 class MagazineLuizaService {
     restService = null;
@@ -32,7 +33,8 @@ class MagazineLuizaService {
 
     async getListOfProductsByCodes(codesFormated) {
         const $ = await this.loadHtmlCheerio(codesFormated);
-        console.log($(this.itensTagHtml).length);
+        const itemsCount = $(this.itensTagHtml).length;
+        Logger.info(`Itens encontrados: ${itemsCount}`);
         return $(this.itensTagHtml);
     }
 
@@ -51,23 +53,22 @@ class MagazineLuizaService {
         let products = [];
         const $ = await this.loadHtmlCheerio(codesFormated);
         const itensLi = await this.getListOfProductsByHtmlLoaded($);
-        // console.log({itensLi});
         if(itensLi.length >= numberAdByPost) {
             const itensImg = $(`${this.itensTagHtml} img[data-testid="image"]`);
             const itensHref = $(`${this.itensTagHtml} > a[data-testid="product-card-container"]`);
             const itensTitle = $(`${this.itensTagHtml} h2[data-testid="product-title"]`);
             const itensPrice = $(`${this.itensTagHtml} p[data-testid="price-value"]`);
-            const indexs = this.createIndexForValidation(itensLi.length);
+            const indexs = ArrayUtils.createIndexForValidation(itensLi.length);
             indexs.forEach(index => {
                 if(index <= numberAdByPost) {
                     const href = itensHref[index].attribs['href'];
                     const title = $(itensTitle[index]).text().trim();
                     const link = `${ENDPOINTS.parceiroMagulu.base}${href}`;
-                    const code = href.split('/')[4];
-                    const imgLink = itensImg[index].attribs['src'].replace('280x210', this.imgSize);
+                    const code = UrlUtils.extractProductCode(href);
+                    const imgLink = UrlUtils.normalizeImageSize(itensImg[index].attribs['src'], '280x210', this.imgSize);
                     const priceText = $(itensPrice[index]).text().trim();
-                    const price = priceText.replace('ou ', '').trim();
-                    console.log({price});
+                    const price = StringUtils.formatPrice(priceText);
+                    Logger.debug(`Produto processado: ${title} - ${price}`);
                     products.push({title, code, imgLink, price, link});
                 }
             });
@@ -82,20 +83,21 @@ class MagazineLuizaService {
             const $ = await this.loadHtmlCheerio(codesFormated);
             const itensLi = await this.getListOfProductsByHtmlLoaded($);
             console.log(itensLi);
+            Logger.info(`Buscando produtos - ${itensLi.length} itens encontrados`);
             if(itensLi.length === numberAdByPost) {
                 const itensImg = $(`${this.itensTagHtml} img[data-testid="image"]`);
                 const itensTitleAndHref = $(`${this.itensTagHtml} > a[data-testid="product-card-container"]`);
                 const itensTitle = $(`${this.itensTagHtml} h2[data-testid="product-title"]`);
                 const itensPrice = $(`${this.itensTagHtml} p[data-testid="price-value"]`);
-                const indexs = this.createIndexForValidation(itensLi.length);
+                const indexs = ArrayUtils.createIndexForValidation(itensLi.length);
                 indexs.forEach(index => {
                     const title = $(itensTitle[index]).text().trim();
                     const link = `${ENDPOINTS.parceiroMagulu.base}${itensTitleAndHref[index].attribs['href']}`;
-                    const code = itensTitleAndHref[index].attribs['href'].split('/')[4];
-                    const imgLink = itensImg[index].attribs['src'].replace('280x210', this.imgSize);
+                    const code = UrlUtils.extractProductCode(itensTitleAndHref[index].attribs['href']);
+                    const imgLink = UrlUtils.normalizeImageSize(itensImg[index].attribs['src'], '280x210', this.imgSize);
                     const priceText = $(itensPrice[index]).text().trim();
-                    const price = priceText.replace('ou ', '').trim();
-                    console.log(imgLink);
+                    const price = StringUtils.formatPrice(priceText);
+                    Logger.debug(`Imagem URL: ${imgLink}`);
                     products.push({title, code, imgLink, price, link});
                 });
                 allProducts.push(products);
@@ -112,7 +114,7 @@ class MagazineLuizaService {
     // }
 
     createIndexForValidation(number) {
-        return Object.keys(new Array(number).fill(null));
+        return ArrayUtils.createIndexForValidation(number);
     }
 }
 

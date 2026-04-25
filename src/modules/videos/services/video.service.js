@@ -1,4 +1,5 @@
 const { DIR_TEMP, DIR_FONT, DIR_TO_POST, DIR_VIDEOS } = require("../../../config/directory.config");
+const { Logger, StringUtils } = require('../../../shared/utils');
 
 const { open, } = require('node:fs/promises');
 const fs = require('node:fs');
@@ -178,26 +179,16 @@ class VideoService {
         for (const post of posts.posts) {
             try {
                 const result = await this.createVideo(post, `${DIR_TO_POST}/saida_${count}.mp4`);
-                if (result) console.log(`Vídeo ${post.titleVideo} criado com sucesso!`);
+                if (result) Logger.success(`Vídeo ${post.titleVideo} criado com sucesso!`);
             } catch (error) {
-                console.log(`Error ao criar o video ${post.titleVideo} `);
-                console.error('Detalhes do erro:', error.message);
-                console.error('Stack:', error.stack);
+                Logger.error(`Erro ao criar o vídeo ${post.titleVideo}`, error);
             }
             count++;
         }
     }
 
     validateAdsCharacter(ads) {
-        const regex = /([\u0300-\u036f]|[^0-9a-zA-ZáàâãéèêíïóôõöúçñÁÀÂÃÉÈÍÏÓÔÕÖÚÇÑ\#\ \$\*\(\)\=\/\;\.\,\-\_\\])/g;
-        for (const item of ads) {
-            Object.keys(item).forEach(key => {
-                if (key === 'title' || key === 'code' || key === 'price') {
-                    const text = item[key].replace(regex, '');
-                    item[key] = text;
-                }
-            });
-        }
+        StringUtils.sanitizeAdsObject(ads);
     }
 
     async validateInputs(post, outputPath) {
@@ -238,7 +229,7 @@ class VideoService {
             const stats = fs.statfsSync(tmpDir);
             return stats.bavail * stats.bsize;
         } catch (err) {
-            console.warn('Não foi possível verificar espaço em disco:', err.message);
+            Logger.warn('Não foi possível verificar espaço em disco', err);
             return Infinity;
         }
     }
@@ -256,10 +247,10 @@ class VideoService {
         try {
             if (tempPath && fs.existsSync(tempPath)) {
                 await fs.promises.unlink(tempPath);
-                console.log(`[VideoService] Arquivo temporário removido: ${tempPath}`);
+                Logger.info(`Arquivo temporário removido: ${tempPath}`);
             }
         } catch (err) {
-            console.warn(`[VideoService] Erro ao remover arquivo temporário: ${err.message}`);
+            Logger.warn(`Erro ao remover arquivo temporário`, err);
         }
     }
 
@@ -316,9 +307,9 @@ class VideoService {
         const filePath = templateColorSelected.filePath;
         const videoConfig = templateColorSelected;
 
-        console.log('init create video...');
+        Logger.info('Iniciando criação de vídeo');
 
-        if (fs.existsSync(`${DIR_TEMP}/testes/saida.mp4`)) await fs.rm(`${DIR_TEMP}/testes/saida.mp4`, () => { console.log('deleted!'); });
+        if (fs.existsSync(`${DIR_TEMP}/testes/saida.mp4`)) await fs.rm(`${DIR_TEMP}/testes/saida.mp4`, () => { Logger.debug('Arquivo de teste removido'); });
 
         const titleSplit = post.titleVideo.split(' ');
         const titleFormated = [];
@@ -485,8 +476,8 @@ class VideoService {
         const arrayFfmepgWithTmp = arrayFfmepg.slice();
         arrayFfmepgWithTmp[arrayFfmepgWithTmp.length - 1] = tempPath;
         
-        console.log(`[VideoService] Iniciando FFmpeg para: ${pathVideoOut}`);
-        console.log(`[VideoService] Inputs: ${arrayFfmepgWithTmp.filter(arg => arg === '-i').length} imagens`);
+        Logger.info(`Iniciando FFmpeg para: ${pathVideoOut}`);
+        Logger.info(`Inputs: ${arrayFfmepgWithTmp.filter(arg => arg === '-i').length} imagens`);
 
         return this.withTimeout(
             new Promise(async (resolve, reject) => {
@@ -509,27 +500,24 @@ class VideoService {
                 });
 
                 resultVideo.on('error', (error) => {
-                    console.log('');
-                    console.error(`[VideoService] Erro ao iniciar FFmpeg: ${error.message}`);
+                    Logger.error(`Erro ao iniciar FFmpeg: ${error.message}`);
                     this.cleanupTempFile(tempPath);
                     reject(new Error(`FFmpeg processo falhou: ${error.message}`));
                 });
 
                 resultVideo.on('close', async (code) => {
-                    console.log('');
-
                     if (code === 0) {
                         try {
                             await fs.promises.rename(tempPath, pathVideoOut);
-                            console.log(`[VideoService] ✓ Vídeo criado com sucesso: ${pathVideoOut}`);
+                            Logger.success(`Vídeo criado com sucesso: ${pathVideoOut}`);
                             resolve(true);
                         } catch (err) {
-                            console.error(`[VideoService] Erro ao mover arquivo temporário: ${err.message}`);
+                            Logger.error(`Erro ao mover arquivo temporário`, err);
                             await this.cleanupTempFile(tempPath);
                             reject(new Error(`Falha ao finalizar vídeo: ${err.message}`));
                         }
                     } else {
-                        console.error(`[VideoService] FFmpeg exited with code ${code}`);
+                        Logger.error(`FFmpeg exited with code ${code}`);
                         let errorMsg = `FFmpeg exited with code ${code}`;
                         
                         if (ffmpegError.includes('Unknown encoder')) {
@@ -545,7 +533,7 @@ class VideoService {
                             }
                         }
                         
-                        console.error(`[VideoService] Erro: ${errorMsg}`);
+                        Logger.error(`Erro: ${errorMsg}`);
                         await this.cleanupTempFile(tempPath);
                         reject(new Error(errorMsg));
                     }
@@ -559,23 +547,23 @@ class VideoService {
     async teste2(filePath = this.filePath) {
         fs.open(filePath, 'r', function (err, fd) {
             try {
-                console.log({ fd });
+                Logger.debug({ fd });
                 let movie = VideoLib.MovieParser.parse(fd);
-                console.log('Duration:', movie.relativeDuration());
+                Logger.info('Duration: ' + movie.relativeDuration());
 
                 let fragmentList = VideoLib.FragmentListBuilder.build(movie, 3);
-                console.log('Duration fragmentList:', fragmentList.relativeDuration());
+                Logger.info('Duration fragmentList: ' + fragmentList.relativeDuration());
                 fs.open(`${DIR_TEMP}/testes/teste-fragment.idx`, 'w', function (err, fdi) {
                     try {
                         VideoLib.FragmentListIndexer.index(fragmentList, fdi);
                     } catch (ex) {
-                        console.error('Error:', ex);
+                        Logger.error('Error:', ex);
                     } finally {
                         fs.closeSync(fdi);
                     }
                 });
             } catch (ex) {
-                console.error('Error:', ex);
+                Logger.error('Error:', ex);
             } finally {
                 fs.closeSync(fd);
             }
@@ -587,16 +575,16 @@ class VideoService {
             fs.open(`${DIR_TEMP}/testes/teste-fragment.idx`, 'r', function (err, fdi) {
                 try {
                     let fragmentList = VideoLib.FragmentListIndexer.read(fdi);
-                    console.log('Duration:', fragmentList.relativeDuration());
+                    Logger.info('Duration: ' + fragmentList.relativeDuration());
                     for (let i = 0; i < fragmentList.count(); i++) {
-                        console.log('fragmentList.count():', fragmentList.count());
+                        Logger.info('fragmentList.count(): ' + fragmentList.count());
                         let fragment = fragmentList.get(i);
                         let sampleBuffers = VideoLib.FragmentReader.readSamples(fragment, fd);
                         let buffer = VideoLib.HLSPacketizer.packetize(fragment, sampleBuffers);
-                        console.log({ buffer });
+                        Logger.debug({ buffer });
                     }
                 } catch (ex) {
-                    console.error('Error:', ex);
+                    Logger.error('Error:', ex);
                 } finally {
                     fs.closeSync(fd);
                     fs.closeSync(fdi);

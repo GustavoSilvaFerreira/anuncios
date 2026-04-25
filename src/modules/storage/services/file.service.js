@@ -1,6 +1,6 @@
 const fs = require('fs');
 const { readFile, writeFile, mkdir, readdir, rename } = require('fs/promises');
-const { error } = require('../../../config/constants');
+// const { error } = require('../../../config/constants');
 
 // const DEFAULT_OPTIONS = {
 //     maxLines: 3,
@@ -16,6 +16,10 @@ class File {
 
     static async getFileContent(filePath) {
         return (await readFile(filePath)).toString("utf8");
+    }
+
+    static getFileContentSync(filePath) {
+        return fs.readFileSync(filePath, {encoding: "utf8"});
     }
 
     static readdir(dirPath) {

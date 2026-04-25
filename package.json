@@ -6,6 +6,7 @@
   "scripts": {
     "postinstall": "node post-install.js",
     "start": "node main.js",
+    "youtube:listvideos": "node test.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

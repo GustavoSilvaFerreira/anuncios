@@ -3,6 +3,8 @@
  * Processa vídeos sequencialmente ou com limite de concorrência
  */
 
+const { Logger } = require('../../../shared/utils');
+
 class VideoQueue {
     constructor(videoService, maxConcurrent = 1) {
         this.videoService = videoService;
@@ -56,7 +58,7 @@ class VideoQueue {
      */
     async process() {
         this.stats.startTime = Date.now();
-        console.log(`[VideoQueue] Iniciando fila com ${this.queue.length} vídeos (max concorrência: ${this.maxConcurrent})`);
+        Logger.info(`Iniciando fila com ${this.queue.length} vídeos (max concorrência: ${this.maxConcurrent})`);
 
         const promises = [];
 
@@ -68,8 +70,8 @@ class VideoQueue {
         this.stats.endTime = Date.now();
 
         const duration = ((this.stats.endTime - this.stats.startTime) / 1000).toFixed(2);
-        console.log(`[VideoQueue] Fila concluída em ${duration}s`);
-        console.log(`[VideoQueue] Resumo: ${this.stats.completed} sucesso, ${this.stats.failed} falhas, ${this.stats.retried} retries`);
+        Logger.success(`Fila concluída em ${duration}s`);
+        Logger.info(`Resumo: ${this.stats.completed} sucesso, ${this.stats.failed} falhas, ${this.stats.retried} retries`);
 
         return {
             success: this.stats.failed === 0,
@@ -111,7 +113,7 @@ class VideoQueue {
             task.startTime = Date.now();
 
             try {
-                console.log(`[VideoQueue] Processando ${id} (${this.stats.completed + this.stats.failed + 1}/${this.stats.total}) - Tentativa ${task.attempts}/${maxRetries}`);
+                Logger.info(`Processando ${id} (${this.stats.completed + this.stats.failed + 1}/${this.stats.total}) - Tentativa ${task.attempts}/${maxRetries}`);
                 
                 const result = await this.videoService.createVideo(post, outputPath);
                 
@@ -119,7 +121,7 @@ class VideoQueue {
                 task.endTime = Date.now();
                 this.stats.completed++;
 
-                console.log(`[VideoQueue] ✓ ${id} criado com sucesso (${((task.endTime - task.startTime) / 1000).toFixed(2)}s)`);
+                Logger.success(`${id} criado com sucesso (${((task.endTime - task.startTime) / 1000).toFixed(2)}s)`);
                 onProgress?.({ status: 'completed', taskId: id, result });
                 break;
 
@@ -129,8 +131,8 @@ class VideoQueue {
 
                 if (task.attempts < maxRetries) {
                     const delay = Math.pow(2, task.attempts - 1) * 1000;
-                    console.log(`[VideoQueue] ✗ ${id} falhou na tentativa ${task.attempts}. Aguardando ${delay}ms antes de retry...`);
-                    console.log(`[VideoQueue] Erro: ${error.message}`);
+                    Logger.warn(`${id} falhou na tentativa ${task.attempts}. Aguardando ${delay}ms antes de retry...`);
+                    Logger.error(`Erro: ${error.message}`);
 
                     this.stats.retried++;
                     onError?.({ status: 'retrying', taskId: id, attempt: task.attempts, error, nextRetryIn: delay });
@@ -140,8 +142,8 @@ class VideoQueue {
                     task.status = 'failed';
                     this.stats.failed++;
 
-                    console.log(`[VideoQueue] ✗ ${id} falhou após ${task.attempts} tentativas`);
-                    console.log(`[VideoQueue] Erro final: ${error.message}`);
+                    Logger.error(`${id} falhou após ${task.attempts} tentativas`);
+                    Logger.error(`Erro final: ${error.message}`);
 
                     onError?.({ status: 'failed', taskId: id, attempt: task.attempts, error });
                     break;

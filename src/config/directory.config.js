@@ -10,6 +10,7 @@ const DIR_TEMP = join(RAIZ, "temp");
 const DIR_TO_POST = join(DIR_TEMP, "toPost");
 const DIR_TO_CREATE = join(DIR_TEMP, "toCreate");
 const FILE_FOR_CREATE = join(DIR_FILES, 'forCreateAd.txt');
+const FILE_DATE_FIRST_POST = join(DIR_FILES, 'date-first-post.txt');
 // const DIR_VIDEOS = join(RAIZ, "../../", "Downloads");
 
 module.exports = {
@@ -19,6 +20,8 @@ module.exports = {
     DIR_TEMP,
     DIR_VIDEOS,
     FILE_FOR_CREATE,
+    FILE_DATE_FIRST_POST,
     DIR_FONT,
-    DIR_FILES
+    DIR_FILES,
+    RAIZ
 };
