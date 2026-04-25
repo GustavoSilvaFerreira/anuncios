@@ -11,7 +11,8 @@ class File {
 
     static async txtForArrayString(filePath) {
         const content = await File.getFileContent(filePath);
-        return content.split('\n').map(item => item.replace('\r', ''));
+        const { StringUtils, ArrayUtils } = require('../../../shared/utils');
+        return ArrayUtils.map(StringUtils.splitBySeparator(content, '\n'), item => item.replace('\r', ''));
     }
 
     static async getFileContent(filePath) {

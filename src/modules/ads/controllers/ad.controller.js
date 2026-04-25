@@ -61,14 +61,6 @@ class Ad {
         );
     }
 
-    validateThreeCodesForCreate(codesString) {
-        return ValidationUtils.validateThreeCodesForCreate(codesString, this.numberAdByPost);
-    }
-
-    getExtension(linkImg) {
-        return StringUtils.getExtension(linkImg);
-    }
-
     downloadImg(linkImg, filePath) {
         return this.restService.downloadImage(linkImg, filePath);
     }
