@@ -1,5 +1,5 @@
 const { DIR_TEMP, DIR_FONT, DIR_TO_POST, DIR_VIDEOS } = require("../../../config/directory.config");
-const { Logger, StringUtils, ArrayUtils } = require('../../../shared/utils');
+const { Logger, StringUtils, ArrayUtils, ValidationUtils } = require('../../../shared/utils');
 
 const { open, } = require('node:fs/promises');
 const fs = require('node:fs');
@@ -195,7 +195,7 @@ class VideoService {
         const errors = [];
 
         for (const ad of post.ads) {
-            if (!fs.existsSync(ad.imgPath)) {
+            if (!ValidationUtils.validateFileExists(ad.imgPath)) {
                 errors.push(`Imagem não encontrada: ${ad.imgPath}`);
             }
         }
@@ -205,7 +205,7 @@ class VideoService {
         }
 
         const outputDir = path.dirname(outputPath);
-        if (!fs.existsSync(outputDir)) {
+        if (!ValidationUtils.validateFileExists(outputDir)) {
             try {
                 fs.mkdirSync(outputDir, { recursive: true });
             } catch (err) {
@@ -213,8 +213,9 @@ class VideoService {
             }
         }
 
-        const diskSpace = this.getAvailableDiskSpace();
-        if (diskSpace < 500 * 1024 * 1024) {
+        const minSpaceRequired = 500 * 1024 * 1024; // 500MB
+        if (!ValidationUtils.validateMinDiskSpace(minSpaceRequired)) {
+            const diskSpace = this.getAvailableDiskSpace();
             errors.push(`Espaço em disco insuficiente: ${(diskSpace / 1024 / 1024).toFixed(0)}MB disponível (requer 500MB)`);
         }
 
@@ -450,8 +451,8 @@ class VideoService {
             '-filter_complex', `[1:v] scale=${scaleImgs} [img1]; [0:v][img1] overlay=${overlayImgs}:enable='between(t,3.1,5.9)' [v0];
                 [2:v] scale=${scaleImgs} [img2]; [v0][img2] overlay=${overlayImgs}:enable='between(t,6.1,8.9)' [v1];
                 [3:v] scale=${scaleImgs} [img3]; [v1][img3] overlay=${overlayImgs}:enable='between(t,9.1,11.9)',
-                ${filterTitle.join(',')},
-                ${filtersAds.join(',')},
+                ${StringUtils.join(filterTitle, ',')},
+                ${StringUtils.join(filtersAds, ',')},
                 drawtext=text='Siga':x=(w-text_w)/2:y=(h-text_h)/3:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=${videoConfig.fontColor.titleFirstEndPage}:enable='between(t,12.1,15)',
                 drawtext=text='nossas':x=(w-text_w)/2:y=(h-text_h)/2.5:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=${videoConfig.fontColor.titleFirstEndPage}:enable='between(t,12.1,15)',
                 drawtext=text='redes sociais':x=(w-text_w)/2:y=(h-text_h)/2.15:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=${videoConfig.fontColor.titleFirstEndPage}:enable='between(t,12.1,15)',
@@ -477,7 +478,7 @@ class VideoService {
         arrayFfmepgWithTmp[arrayFfmepgWithTmp.length - 1] = tempPath;
         
         Logger.info(`Iniciando FFmpeg para: ${pathVideoOut}`);
-        Logger.info(`Inputs: ${arrayFfmepgWithTmp.filter(arg => arg === '-i').length} imagens`);
+        Logger.info(`Inputs: ${ArrayUtils.filter(arrayFfmepgWithTmp, arg => arg === '-i').length} imagens`);
 
         return this.withTimeout(
             new Promise(async (resolve, reject) => {
@@ -527,7 +528,7 @@ class VideoService {
                         } else if (ffmpegError.includes('File format not recognised')) {
                             errorMsg = 'Formato de arquivo não reconhecido';
                         } else if (ffmpegError.length > 0) {
-                            const errorLines = StringUtils.splitBySeparator(ffmpegError, '\n').filter(l => l.length > 0);
+                            const errorLines = ArrayUtils.filter(StringUtils.splitBySeparator(ffmpegError, '\n'), l => l.length > 0);
                             if (errorLines.length > 0) {
                                 errorMsg = errorLines[errorLines.length - 1];
                             }

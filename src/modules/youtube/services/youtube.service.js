@@ -37,13 +37,13 @@ class YoutubeService {
      */
     async searchVideos(searchQuery, channelId = 'UCEsHJAZezJSuOUEqLJ3t2dg') {
         try {
-            // Validações
-            if (!searchQuery || typeof searchQuery !== 'string') {
+            // Validações usando ValidationUtils
+            if (!ValidationUtils.validateString(searchQuery, 1)) {
                 Logger.warn('Parâmetro searchQuery inválido ou vazio');
                 return null;
             }
 
-            if (!channelId || typeof channelId !== 'string') {
+            if (!ValidationUtils.validateString(channelId, 1)) {
                 Logger.warn('Parâmetro channelId inválido');
                 return null;
             }
@@ -80,7 +80,7 @@ class YoutubeService {
      */
     async getVideoDetails(videoId) {
         try {
-            if (!videoId || typeof videoId !== 'string') {
+            if (!ValidationUtils.validateString(videoId, 1)) {
                 Logger.warn('Parâmetro videoId inválido');
                 return null;
             }

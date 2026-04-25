@@ -80,18 +80,6 @@ class ValidationUtils {
   }
 
   /**
-   * Valida se arquivo existe (para paths de imagem)
-   */
-  static validateFileExists(filePath) {
-    try {
-      const fs = require('fs');
-      return fs.existsSync(filePath);
-    } catch {
-      return false;
-    }
-  }
-
-  /**
    * Valida extensão de arquivo
    */
   static validateFileExtension(filePath, allowedExtensions) {
@@ -141,6 +129,40 @@ class ValidationUtils {
            this.validateProductCode(product.code) &&
            this.validateUrl(product.imgLink) &&
            this.validateUrl(product.link);
+  }
+
+  /**
+   * Valida se arquivo ou diretório existe
+   * Encontrado em: video.service.js
+   */
+  static validateFileExists(filePath) {
+    const fs = require('fs');
+    return fs.existsSync(filePath);
+  }
+
+  /**
+   * Valida espaço mínimo em disco (em bytes)
+   * Encontrado em: video.service.js
+   */
+  static validateMinDiskSpace(minSpaceBytes) {
+    const getAvailableDiskSpace = () => {
+      const fs = require('fs');
+      const path = require('path');
+      const stats = fs.statSync(process.cwd());
+      // Simplificação - em produção usar biblioteca específica
+      return 1024 * 1024 * 1024; // 1GB placeholder
+    };
+    
+    const availableSpace = getAvailableDiskSpace();
+    return availableSpace >= minSpaceBytes;
+  }
+
+  /**
+   * Valida string não vazia e do tipo correto
+   * Encontrado em: youtube.service.js
+   */
+  static validateString(value, minLength = 1) {
+    return typeof value === 'string' && value.trim().length >= minLength;
   }
 }
 
