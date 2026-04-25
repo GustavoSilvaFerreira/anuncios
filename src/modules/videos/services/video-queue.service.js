@@ -3,7 +3,7 @@
  * Processa vídeos sequencialmente ou com limite de concorrência
  */
 
-const { Logger } = require('../../../shared/utils');
+const { Logger, ArrayUtils } = require('../../../shared/utils');
 
 class VideoQueue {
     constructor(videoService, maxConcurrent = 1) {
@@ -79,7 +79,7 @@ class VideoQueue {
                 ...this.stats,
                 duration: `${duration}s`
             },
-            results: this.queue.map(t => ({
+            results: ArrayUtils.map(this.queue, t => ({
                 id: t.id,
                 status: t.status,
                 attempts: t.attempts,

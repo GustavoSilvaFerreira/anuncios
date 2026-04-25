@@ -1,5 +1,5 @@
 const { DIR_TEMP, DIR_FONT, DIR_TO_POST, DIR_VIDEOS } = require("../../../config/directory.config");
-const { Logger, StringUtils } = require('../../../shared/utils');
+const { Logger, StringUtils, ArrayUtils } = require('../../../shared/utils');
 
 const { open, } = require('node:fs/promises');
 const fs = require('node:fs');
@@ -219,7 +219,7 @@ class VideoService {
         }
 
         if (errors.length > 0) {
-            throw new Error(`Validação falhou:\n${errors.join('\n')}`);
+            throw new Error(`Validação falhou:\n${StringUtils.join(errors, '\n')}`);
         }
     }
 
@@ -255,9 +255,9 @@ class VideoService {
     }
 
     setVideosRandom() {
-        Object.keys(this.VIDEOS_CONFIG).forEach(template => {
-            return Object.keys(this.VIDEOS_CONFIG[template].templateColor).forEach(templateColor => {
-                this.videosRandom.push({
+        ArrayUtils.forEach(Object.keys(this.VIDEOS_CONFIG), template => {
+            return ArrayUtils.forEach(Object.keys(this.VIDEOS_CONFIG[template].templateColor), templateColor => {
+                ArrayUtils.pushToArray(this.videosRandom, {
                     template,
                     templateColor
                 });
@@ -311,35 +311,35 @@ class VideoService {
 
         if (fs.existsSync(`${DIR_TEMP}/testes/saida.mp4`)) await fs.rm(`${DIR_TEMP}/testes/saida.mp4`, () => { Logger.debug('Arquivo de teste removido'); });
 
-        const titleSplit = post.titleVideo.split(' ');
+        const titleSplit = StringUtils.splitBySeparator(post.titleVideo, ' ');
         const titleFormated = [];
         switch (titleSplit.length) {
             case 1:
-                titleFormated.push({
+                ArrayUtils.pushToArray(titleFormated, {
                     y: 2.15,
                     text: titleSplit[0]
                 });
                 break;
             case 2:
-                titleFormated.push({
+                ArrayUtils.pushToArray(titleFormated, {
                     y: 2.3,
                     text: titleSplit[0]
                 });
-                titleFormated.push({
+                ArrayUtils.pushToArray(titleFormated, {
                     y: 2,
                     text: titleSplit[1]
                 });
                 break;
             case 3:
-                titleFormated.push({
+                ArrayUtils.pushToArray(titleFormated, {
                     y: 2.6,
                     text: titleSplit[0]
                 });
-                titleFormated.push({
+                ArrayUtils.pushToArray(titleFormated, {
                     y: 2.15,
                     text: titleSplit[1]
                 });
-                titleFormated.push({
+                ArrayUtils.pushToArray(titleFormated, {
                     y: 1.85,
                     text: titleSplit[2]
                 });
@@ -364,8 +364,8 @@ class VideoService {
 
 
         const filterTitle = [];
-        titleFormated.forEach(item => {
-            filterTitle.push(`drawtext=text='${item.text}':x=(w-text_w)/2:y=(h-text_h)/${item.y}:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=${videoConfig.fontColor.titleFirstEndPage}:enable='between(t,0,2.9)'`);
+        ArrayUtils.forEach(titleFormated, item => {
+            ArrayUtils.pushToArray(filterTitle, `drawtext=text='${item.text}':x=(w-text_w)/2:y=(h-text_h)/${item.y}:fontfile=${fontFamily.titleFirstEndPage}:fontsize=${fontSize.titleFirstEndPage}:fontcolor=${videoConfig.fontColor.titleFirstEndPage}:enable='between(t,0,2.9)'`);
         });
 
         const inputImgs = [];
@@ -386,29 +386,29 @@ class VideoService {
             return index;
         }
 
-        post.ads.forEach((ad, index) => {
+        ArrayUtils.forEach(post.ads, (ad, index) => {
             const time = timeByIndex(index + 1);
             if (time) {
-                inputImgs.push('-i');
-                inputImgs.push(ad.imgPath);
+                ArrayUtils.pushToArray(inputImgs, '-i');
+                ArrayUtils.pushToArray(inputImgs, ad.imgPath);
 
-                const titleSplit = ad.title.split(' ');
+                const titleSplit = StringUtils.splitBySeparator(ad.title, ' ');
                 let indexTitle = 1;
                 let titleAds = {};
 
-                titleSplit.forEach(titleSplited => {
+                ArrayUtils.forEach(titleSplit, titleSplited => {
                     indexTitle = setTitleFormated(titleAds, indexTitle, titleSplited);
                 });
                 const titleAdsFormated = [];
                 switch (Object.keys(titleAds).length) {
                     case 1:
-                        titleAdsFormated.push({
+                        ArrayUtils.pushToArray(titleAdsFormated, {
                             y: 150,
                             text: titleAds['1']
                         });
                         break;
                     case 2:
-                        titleAdsFormated.push({
+                        ArrayUtils.pushToArray(titleAdsFormated, {
                             y: 140,
                             text: titleAds['1']
                         });
@@ -527,7 +527,7 @@ class VideoService {
                         } else if (ffmpegError.includes('File format not recognised')) {
                             errorMsg = 'Formato de arquivo não reconhecido';
                         } else if (ffmpegError.length > 0) {
-                            const errorLines = ffmpegError.split('\n').filter(l => l.length > 0);
+                            const errorLines = StringUtils.splitBySeparator(ffmpegError, '\n').filter(l => l.length > 0);
                             if (errorLines.length > 0) {
                                 errorMsg = errorLines[errorLines.length - 1];
                             }

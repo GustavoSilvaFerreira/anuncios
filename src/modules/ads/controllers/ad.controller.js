@@ -1,14 +1,13 @@
 const { randomUUID } = require('crypto');
 const MagazineLuizaService = require('../services/magazine-luiza.service');
 const RestService = require('../../storage/services/rest.service');
-const File = require('../../storage/services/file.service');
 const { join } = require('path');
 const adJson = require('../ad.json');
 const { DIR_TO_POST, DIR_TEMP, DIR_VIDEOS, FILE_FOR_CREATE, DIR_TO_CREATE } = require('../../../config/directory.config');
 const VideoQueue = require('../../videos/services/video-queue.service');
 const ENDPOINTS = require('../../../config/url.config');
 const VideoService = require('../../videos/services/video.service');
-const { Logger, ValidationUtils, StringUtils, HashtagUtils } = require('../../../shared/utils');
+const { Logger, ValidationUtils, StringUtils, HashtagUtils, ArrayUtils, DateUtils, TextFormatter, FileUtils } = require('../../../shared/utils');
 
 class Ad {
     magazineLuizaService = null;
@@ -30,56 +29,36 @@ class Ad {
         this.videoService = videoService;
     }
 
-    getDatePlusDay(date, days) {
-        date.setDate(date.getDate() + days);
-        return this.getDate(date.getFullYear(), date.getMonth() + 1, date.getDate());
-    }
-
-    getDate(year, month, day) {
-        return new Date(year, month - 1, day);
-    }
-
-    getDateFormated(date) {
-        const datePost = date;
-        const monthformated = datePost.getMonth() >= 9 ? datePost.getMonth() + 1 : `0${datePost.getMonth() + 1}`;
-        return `${datePost.getFullYear()}-${monthformated}-${datePost.getDate()}`;
-    }
-
-    linkBaseSearchProducts = (codes) => `${ENDPOINTS.wedConecta.search}/${codes.join('+')}/`;
+    linkBaseSearchProducts = (codes) => `${ENDPOINTS.wedConecta.search}/${StringUtils.join(codes, '+')}/`;
 
     async updateVideosName(videoNumber, videoName, videosFiltered) {
-        videosFiltered.forEach(item => {
+            ArrayUtils.forEach(videosFiltered, item => {
             if (item === `${videoNumber}.mp4`) {
-                File.rename(`${DIR_VIDEOS}/${videoNumber}.mp4`, `${DIR_VIDEOS}/${videoName}.mp4`);
+                FileUtils.rename(`${DIR_VIDEOS}/${videoNumber}.mp4`, `${DIR_VIDEOS}/${videoName}.mp4`);
             }
         });
     }
 
     separateCodeTitleAdTitlePostAndHashtag(contentArray) {
-        return contentArray.map(item => {
-            const itemSplited = item.split(';');
-            if (itemSplited.length === 4) {
-                const codes = this.validateThreeCodesForCreate(itemSplited[0]);
-                if (codes) {
-                    return {
-                        codes: itemSplited[0],
-                        titleVideo: itemSplited[1],
-                        titlePost: itemSplited[2],
-                        hashtag: itemSplited[3],
-                        products: []
+        return ArrayUtils.filter(
+            ArrayUtils.map(contentArray, item => {
+                const itemSplited = StringUtils.splitBySeparator(item, ';');
+                if (itemSplited.length === 4) {
+                    const codes = ValidationUtils.validateThreeCodesForCreate(itemSplited[0], this.numberAdByPost) ? itemSplited[0] : null;
+                    if (codes) {
+                        return {
+                            codes: itemSplited[0],
+                            titleVideo: itemSplited[1],
+                            titlePost: itemSplited[2],
+                            hashtag: itemSplited[3],
+                            products: []
+                        }
                     }
                 }
-            }
-            return false;
-        }).filter(item => item !== false);
-    }
-
-    validateThreeCodesForCreate(codesString) {
-        return ValidationUtils.validateThreeCodesForCreate(codesString, this.numberAdByPost);
-    }
-
-    getExtension(linkImg) {
-        return StringUtils.getExtension(linkImg);
+                return false;
+            }),
+            item => item !== false
+        );
     }
 
     downloadImg(linkImg, filePath) {
@@ -91,8 +70,8 @@ class Ad {
         const contentsForCreatePosts = [];
         const codeInvalid = [];
         let { year, month, day } = dateFirstPost;
-        let datePost = this.getDate(year, month, day);
-        const contentFileSplited = await File.txtForArrayString(FILE_FOR_CREATE);
+        let datePost = DateUtils.getDate(year, month, day);
+        const contentFileSplited = await FileUtils.txtForArrayString(FILE_FOR_CREATE);
         const contents = this.separateCodeTitleAdTitlePostAndHashtag(contentFileSplited);
         for (const content of contents) {
             const { codes, titleAd, titlePost, hashtag } = content;
@@ -104,11 +83,11 @@ class Ad {
                 tempContents.push(content);
                 if (tempContents.length === this.numberPostsByDay) {
                     contentsForCreatePosts.push({
-                        date: this.getDateFormated(datePost),
+                        date: DateUtils.getDateFormated(datePost),
                         contents: tempContents
                     });
                     tempContents = [];
-                    datePost = this.getDatePlusDay(datePost, 1);
+                    datePost = DateUtils.getDatePlusDay(datePost, 1);
                 }
             } else {
                 codeInvalid.push(content);
@@ -116,19 +95,19 @@ class Ad {
         }
 
         if (contentsForCreatePosts.length > 0) {
-            const dirExists = File.existsSync(DIR_TO_CREATE);
-            if (!dirExists) await File.mkdir(DIR_TO_CREATE);
+            const dirExists = FileUtils.existsSync(DIR_TO_CREATE);
+            if (!dirExists) await FileUtils.mkdir(DIR_TO_CREATE);
             for (const postsDay of contentsForCreatePosts) {
                 const { date } = postsDay;
-                const dateSplit = date.split('-');
+                const dateSplit = StringUtils.splitBySeparator(date, '-');
                 const day = Number(dateSplit[2]);
                 const month = Number(dateSplit[1]);
                 const year = Number(dateSplit[0]);
 
-                const datePost = this.getDateFormated(this.getDate(year, month, day));
+                const datePost = DateUtils.getDateFormated(DateUtils.getDate(year, month, day));
                 const pathDateTitle = join(DIR_TO_CREATE, datePost);
-                const dirDateExists = File.existsSync(pathDateTitle);
-                if (!dirDateExists) await File.mkdir(pathDateTitle);
+                const dirDateExists = FileUtils.existsSync(pathDateTitle);
+                if (!dirDateExists) await FileUtils.mkdir(pathDateTitle);
 
                 const postDay = {
                     date: { day, month, year },
@@ -145,7 +124,7 @@ class Ad {
                     let countProduct = 1
                     for (const product of allProducts) {
                         const linkImg = product.imgLink;
-                        const ext = this.getExtension(linkImg);
+                        const ext = StringUtils.getExtension(linkImg);
                         const imgName = `img-for-create-video-post-${countPost}-image-${countProduct}-${product.code}`;
                         const pathImg = join(pathDateTitle, `${imgName}.${ext}`);
                         product['imgPath'] = pathImg;
@@ -157,16 +136,16 @@ class Ad {
                     postDay.posts.push({
                         titlePost,
                         titleVideo,
-                        hashtags: HashtagUtils.normalizeHashtags(hashtag.split(' ')),
+                        hashtags: HashtagUtils.normalizeHashtags(StringUtils.splitBySeparator(hashtag, ' ')),
                         ads: allProducts
                     });
                     countPost++;
                 }
 
                 const pathJsonAd = join(pathDateTitle, `for-create-post-Ad.json`);
-                await File.writeFile(pathJsonAd, JSON.stringify(postDay));
+                await FileUtils.writeFile(pathJsonAd, JSON.stringify(postDay));
                 const pathTxtForCreateVideo = join(pathDateTitle, `for-create-videos.txt`);
-                await File.writeFile(pathTxtForCreateVideo, print);
+                await FileUtils.writeFile(pathTxtForCreateVideo, print);
 
                 await this.createVideos(postDay);
                 await this.step2FilesForTitleAndComments(postDay);
@@ -183,13 +162,13 @@ class Ad {
     }
 
     async createVideos(postDay) {
-        const dirExists = File.existsSync(DIR_TO_POST);
-        if (!dirExists) await File.mkdir(DIR_TO_POST);
+        const dirExists = FileUtils.existsSync(DIR_TO_POST);
+        if (!dirExists) await FileUtils.mkdir(DIR_TO_POST);
         const { date: { year, month, day } } = postDay;
-        const datePost = this.getDateFormated(this.getDate(year, month, day));
+        const datePost = DateUtils.getDateFormated(DateUtils.getDate(year, month, day));
         const pathDateTitle = join(DIR_TO_POST, datePost);
-        const dirDateExists = File.existsSync(pathDateTitle);
-        if (!dirDateExists) await File.mkdir(pathDateTitle);
+        const dirDateExists = FileUtils.existsSync(pathDateTitle);
+        if (!dirDateExists) await FileUtils.mkdir(pathDateTitle);
 
         Logger.section(`Criação de Vídeos - Processando ${postDay.posts.length} vídeos para ${datePost}`);
 
@@ -238,24 +217,24 @@ class Ad {
     }
 
     async step2FilesForTitleAndComments(postDay) {
-        const dirExists = File.existsSync(DIR_TO_POST);
-        if (!dirExists) await File.mkdir(DIR_TO_POST);
+        const dirExists = FileUtils.existsSync(DIR_TO_POST);
+        if (!dirExists) await FileUtils.mkdir(DIR_TO_POST);
         let count = 1;
 
         for (const anuncio of postDay.posts) {
-            const codes = anuncio.ads.map(ad => ad.code);
+            const codes = ArrayUtils.map(anuncio.ads, ad => ad.code);
             const linkProducts = this.linkBaseSearchProducts(codes);
 
             const { date: { year, month, day } } = postDay;
             const { titlePost, hashtags } = anuncio;
-            const youtube = this.getYoutubeDescription(titlePost, linkProducts, hashtags);
-            const tiktok = this.getTiktokDescription(titlePost, hashtags);
-            const meta = this.getMetaDescription(titlePost, hashtags);
-            const datePost = this.getDateFormated(this.getDate(year, month, day));
+            const youtube = TextFormatter.formatYoutubeDescription(titlePost, linkProducts, StringUtils.join(hashtags, ' '));
+            const tiktok = TextFormatter.formatTiktokDescription(titlePost, StringUtils.join(hashtags, ' '));
+            const meta = TextFormatter.formatInstagramDescription(titlePost, '', StringUtils.join(hashtags, ' '));
+            const datePost = DateUtils.getDateFormated(DateUtils.getDate(year, month, day));
 
             const pathDateTitle = join(DIR_TO_POST, datePost);
-            const dirDateExists = File.existsSync(pathDateTitle);
-            if (!dirDateExists) await File.mkdir(pathDateTitle);
+            const dirDateExists = FileUtils.existsSync(pathDateTitle);
+            if (!dirDateExists) await FileUtils.mkdir(pathDateTitle);
 
             const content = [`Postar as ${this.hours[count - 1]}\n\n`];
             content.push(`${datePost} ${titlePost}\n`);
@@ -271,40 +250,9 @@ class Ad {
             content.push(tiktok);
 
             const fileName = `${count}_${titlePost}_${randomUUID()}.txt`;
-            await File.writeFile(join(pathDateTitle, fileName), content);
+            await FileUtils.writeFile(join(pathDateTitle, fileName), StringUtils.join(content, ''));
             count++;
         }
-    }
-
-    getTiktokDescription(titleComom, hashtags) {
-        const title = `${titleComom} - Link na BIO #parceiromagalu #achadinhos #promo #promotion #sale ${hashtags.join(' ')}`
-        return title;
-    }
-
-    getYoutubeDescription(titleComom, linkProducts, hashtags) {
-        const title = `${titleComom} #shorts da @wedconecta\n\n`;
-        let description = `Link para os produtos: ${linkProducts}\n\n`;
-        description += `Siga nossas redes sociais:\n`;
-        description += `Instagram: https://www.instagram.com/wedconecta\n`;
-        description += `Facebook: https://www.facebook.com/wedconecta\n`;
-        description += `TikTok: https://www.tiktok.com/@wedconecta\n\n`;
-        description += `#shorts da @wedconecta\n`;
-        description += `#achadinhos #achados #parceiromagalu #wedconecta #promoção #promo #promotion #ofertas ${hashtags.join(' ')}\n`;
-
-        return { title, description };
-    }
-
-    getMetaDescription(titleComom, hashtags) {
-        let description = `${titleComom}\nLink da loja na BIO\n\n`;
-        description += `Siga nossas redes sociais:\n`;
-        description += `YouTube: https://www.youtube.com/@wedconecta\n`;
-        description += `TikTok: https://www.tiktok.com/@wedconecta\n`;
-        description += `Instagram: https://www.instagram.com/wedconecta\n`;
-        description += `Facebook: https://www.facebook.com/wedconecta\n\n`;
-
-        description += `#achadinhos #achados #parceiromagalu #wedconecta #promoção #promo #promotion #ofertas ${hashtags.join(' ')}`;
-
-        return description;
     }
 }
 

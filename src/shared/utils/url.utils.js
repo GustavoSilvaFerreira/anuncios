@@ -4,13 +4,16 @@
  * Encontradas em: ad.controller.js
  */
 
+const StringUtils = require('./string.utils');
+const ArrayUtils = require('./array.utils');
+
 class UrlUtils {
   /**
    * Constrói URL de busca de produtos no Magazine Luiza
    * Encontrado em: ad.controller.js (linkBaseSearchProducts)
    */
   static buildSearchProductsUrl(codes, baseSearchUrl) {
-    const codesJoined = Array.isArray(codes) ? codes.join('+') : codes;
+    const codesJoined = Array.isArray(codes) ? StringUtils.join(codes, '+') : codes;
     return `${baseSearchUrl}/${codesJoined}/`;
   }
 
@@ -19,7 +22,7 @@ class UrlUtils {
    * Padrão visto em: magazine-luiza.service.js
    */
   static extractProductCode(url) {
-    const parts = url.split('/');
+    const parts = StringUtils.splitBySeparator(url, '/');
     // Código geralmente está na posição 4
     return parts[4] || null;
   }
@@ -74,7 +77,7 @@ class UrlUtils {
    */
   static joinPath(baseUrl, ...paths) {
     let url = baseUrl;
-    paths.forEach(path => {
+    ArrayUtils.forEach(paths, path => {
       url = url.replace(/\/$/, '') + '/' + path.replace(/^\//, '');
     });
     return url;

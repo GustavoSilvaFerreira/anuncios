@@ -45,10 +45,6 @@ class MagazineLuizaService {
         return resultLi.length >= numberAdByPost;
     }
 
-    formatCodesForSearch(codes) {
-        return codes.join('+');
-    }
-
     async getProductsByCodesFormated(codesFormated, numberAdByPost) {
         let products = [];
         const $ = await this.loadHtmlCheerio(codesFormated);
@@ -62,11 +58,11 @@ class MagazineLuizaService {
             indexs.forEach(index => {
                 if(index <= numberAdByPost) {
                     const href = itensHref[index].attribs['href'];
-                    const title = $(itensTitle[index]).text().trim();
+                    const title = StringUtils.trim($(itensTitle[index]).text());
                     const link = `${ENDPOINTS.parceiroMagulu.base}${href}`;
                     const code = UrlUtils.extractProductCode(href);
                     const imgLink = UrlUtils.normalizeImageSize(itensImg[index].attribs['src'], '280x210', this.imgSize);
-                    const priceText = $(itensPrice[index]).text().trim();
+                    const priceText = StringUtils.trim($(itensPrice[index]).text());
                     const price = StringUtils.formatPrice(priceText);
                     Logger.debug(`Produto processado: ${title} - ${price}`);
                     products.push({title, code, imgLink, price, link});
@@ -91,11 +87,11 @@ class MagazineLuizaService {
                 const itensPrice = $(`${this.itensTagHtml} p[data-testid="price-value"]`);
                 const indexs = ArrayUtils.createIndexForValidation(itensLi.length);
                 indexs.forEach(index => {
-                    const title = $(itensTitle[index]).text().trim();
+                    const title = StringUtils.trim($(itensTitle[index]).text());
                     const link = `${ENDPOINTS.parceiroMagulu.base}${itensTitleAndHref[index].attribs['href']}`;
                     const code = UrlUtils.extractProductCode(itensTitleAndHref[index].attribs['href']);
                     const imgLink = UrlUtils.normalizeImageSize(itensImg[index].attribs['src'], '280x210', this.imgSize);
-                    const priceText = $(itensPrice[index]).text().trim();
+                    const priceText = StringUtils.trim($(itensPrice[index]).text());
                     const price = StringUtils.formatPrice(priceText);
                     Logger.debug(`Imagem URL: ${imgLink}`);
                     products.push({title, code, imgLink, price, link});

@@ -77,6 +77,37 @@ class StringUtils {
   static normalizeSpaces(str) {
     return str.replace(/\s+/g, ' ').trim();
   }
+
+  /**
+   * Divide string por separador específico
+   * Substituto para .split() direto
+   */
+  static splitBySeparator(str, separator) {
+    return str.split(separator);
+  }
+
+  /**
+   * Remove espaços em branco das extremidades
+   * Substituto para .trim() direto
+   */
+  static trim(str) {
+    return str.trim();
+  }
+
+  /**
+   * Junta array de strings com separador
+   * Substituto para .join() direto
+   */
+  static join(array, separator = '') {
+    return array.join(separator);
+  }
+
+  /**
+   * Adiciona zeros à esquerda de um número
+   */
+  static padNumber(num, length = 2) {
+    return String(num).padStart(length, '0');
+  }
 }
 
 module.exports = StringUtils;

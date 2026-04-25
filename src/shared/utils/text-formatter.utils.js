@@ -4,6 +4,9 @@
  * Encontradas em: ad.controller.js, video.service.js
  */
 
+const StringUtils = require('./string.utils');
+const ArrayUtils = require('./array.utils');
+
 class TextFormatter {
   /**
    * Formata texto para descrição de post
@@ -29,27 +32,39 @@ class TextFormatter {
    * Formato específico para YouTube
    */
   static formatYoutubeDescription(title, url, hashtags) {
-    return `${title} #shorts\n\n` +
-           `Link: ${url}\n\n` +
-           `Siga nossas redes:\n` +
-           `Instagram: https://instagram.com/wedconecta\n` +
-           `TikTok: https://tiktok.com/@wedconecta\n` +
-           `Facebook: https://facebook.com/wedconecta\n\n` +
-           `${hashtags}`;
+    const titleFormatted = `${title} #shorts da @wedconecta\n\n`;
+    let description = `Link para os produtos: ${url}\n\n`;
+    description += `Siga nossas redes sociais:\n`;
+    description += `Instagram: https://www.instagram.com/wedconecta\n`;
+    description += `Facebook: https://www.facebook.com/wedconecta\n`;
+    description += `TikTok: https://www.tiktok.com/@wedconecta\n\n`;
+    description += `#shorts da @wedconecta\n`;
+    description += `#achadinhos #achados #parceiromagalu #wedconecta #promoção #promo #promotion #ofertas ${hashtags}\n`;
+
+    return { title: titleFormatted, description: description.trim() };
   }
 
   /**
    * Formato específico para TikTok
    */
   static formatTiktokDescription(title, hashtags) {
-    return `${title}\nLink na BIO\n\n${hashtags}`;
+    return `${title} - Link na BIO #parceiromagalu #achadinhos #promo #promotion #sale ${hashtags}`;
   }
 
   /**
-   * Formato específico para Instagram
+   * Formato específico para Instagram/Meta
    */
   static formatInstagramDescription(title, url, hashtags) {
-    return `${title}\nLink na BIO\n\n${hashtags}`;
+    let description = `${title}\nLink da loja na BIO\n\n`;
+    description += `Siga nossas redes sociais:\n`;
+    description += `YouTube: https://www.youtube.com/@wedconecta\n`;
+    description += `TikTok: https://www.tiktok.com/@wedconecta\n`;
+    description += `Instagram: https://www.instagram.com/wedconecta\n`;
+    description += `Facebook: https://www.facebook.com/wedconecta\n\n`;
+
+    description += `#achadinhos #achados #parceiromagalu #wedconecta #promoção #promo #promotion #ofertas ${hashtags}`;
+
+    return description;
   }
 
   /**
@@ -78,11 +93,10 @@ class TextFormatter {
    * Capitaliza cada palavra
    */
   static titleCase(str) {
-    return str
-      .toLowerCase()
-      .split(' ')
-      .map(word => this.capitalize(word))
-      .join(' ');
+    return StringUtils.join(
+      ArrayUtils.map(StringUtils.splitBySeparator(str.toLowerCase(), ' '), word => this.capitalize(word)),
+      ' '
+    );
   }
 
   /**
@@ -104,7 +118,34 @@ class TextFormatter {
    * Ex: 5 -> "05"
    */
   static padNumber(num, length = 2) {
-    return String(num).padStart(length, '0');
+    return StringUtils.padNumber(num, length);
+  }
+
+  /**
+   * Formata título para vídeo (com validação de caracteres)
+   */
+  static formatVideoTitle(title, maxLength = 100) {
+    const sanitized = StringUtils.sanitizeAdsCharacter(title);
+    return this.truncate(sanitized, maxLength);
+  }
+
+  /**
+   * Formata descrição para redes sociais específicas
+   */
+  static formatSocialMediaDescription(title, url, hashtags, platform = 'default') {
+    const cleanTitle = this.formatVideoTitle(title);
+    const hashtagString = Array.isArray(hashtags) ? StringUtils.join(hashtags, ' ') : hashtags;
+    
+    switch(platform.toLowerCase()) {
+      case 'youtube':
+        return this.formatYoutubeDescription(cleanTitle, url, hashtagString);
+      case 'tiktok':
+        return this.formatTiktokDescription(cleanTitle, hashtagString);
+      case 'instagram':
+        return this.formatInstagramDescription(cleanTitle, url, hashtagString);
+      default:
+        return this.formatPostDescription(cleanTitle, url, hashtagString);
+    }
   }
 }
 
