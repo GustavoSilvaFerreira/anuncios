@@ -478,7 +478,86 @@ fs.statfsSync()    // 1+ ocorrência
 | FileUtils | ❌ | ❌ | - | 🟠 Não existe |
 | Logger | ✅ | ✅ | 90% | 🟢 Completo |
 
-**Total de refatoração necessária:** ~150+ linhas de código em 4 arquivos
+**Total de refatoração necessária:** ~250+ linhas de código em 4 arquivos
+
+---
+
+## ⚠️ DEPENDÊNCIAS E RISCOS NÃO MAPEADOS
+
+### **Dependências Críticas:**
+- **VideoService**: Formatação de títulos depende de TextFormatter
+- **FileUtils**: Mistura entre `fs` direto e `File.service`
+- **Agendamento**: DateUtils afeta core do negócio
+- **Redes Sociais**: TextFormatter requer validação manual
+
+### **Riscos de Regressão:**
+- **DateUtils**: Quebra de agendamento de posts
+- **TextFormatter**: Formatos específicos por plataforma
+- **Validação**: Mudanças podem afetar fluxo principal
+
+---
+
+## 🎯 PLANO MELHORADO - IMPLEMENTAÇÃO POR FASES
+
+### **Fase 1: BAIXO RISCO, ALTO IMPACTO**
+1. **StringUtils** - Operações simples, teste fácil
+   - Substituir 12+ `split()`, 8+ `trim()`, 20+ concatenações
+   - Risk: Mínimo | Impacto: Alto | Tempo: 2-3h
+
+2. **ArrayUtils** - Substituição de loops seguros
+   - Substituir 6+ `.map()`, 8+ `.forEach()`, 4+ `.filter()`
+   - Risk: Baixo | Impacto: Médio | Tempo: 2h
+
+3. **HashtagUtils** - Operações isoladas
+   - Centralizar 6+ `hashtags.join()`, normalizações
+   - Risk: Mínimo | Impacto: Baixo | Tempo: 1h
+
+### **Fase 2: MÉDIO RISCO, MÉDIO IMPACTO**
+4. **ValidationUtils** - Validações críticas
+   - Consolidar 15+ validações manuais
+   - Risk: Médio | Impacto: Médio | Tempo: 3h
+   - **Mitigação**: Testes unitários obrigatórios
+
+5. **UrlUtils** - URLs externas
+   - Consolidar 8+ construções de URL
+   - Risk: Médio | Impacto: Médio | Tempo: 2h
+   - **Mitigação**: Testar endpoints reais
+
+### **Fase 3: ALTO RISCO, ALTO IMPACTO**
+6. **DateUtils** - Core do agendamento
+   - Substituir 8+ ocorrências + parsing
+   - Risk: Alto | Impacto: Alto | Tempo: 4h
+   - **Mitigação**: Backup dos métodos, testes extensivos
+
+7. **TextFormatter** - Formatos de redes sociais
+   - Extrair 3 métodos (~30 linhas)
+   - Risk: Alto | Impacto: Alto | Tempo: 3h
+   - **Mitigação**: Validação manual com exemplos reais
+
+### **Fase 4: CONSOLIDAÇÃO**
+8. **FileUtils** - Decisão arquitetural
+   - Definir padrão entre `fs` e `File.service`
+   - Risk: Baixo | Impacto: Técnico | Tempo: 2h
+
+9. **Limpeza Final**
+   - Remover imports diretos, comentários
+   - Risk: Mínimo | Impacto: Manutenibilidade | Tempo: 1h
+
+---
+
+## 📋 ESTRATÉGIA DE MITIGAÇÃO DE RISCO
+
+### **Para Cada Fase:**
+1. **Backup**: Manter métodos originais comentados por 1 ciclo
+2. **Testes**: Unitários + Integração antes de prosseguir
+3. **Rollback**: Git branch por fase para reversão rápida
+4. **Validação**: Testar com dados reais de produção
+
+### **Critérios de Sucesso:**
+- ✅ Todos os testes passam
+- ✅ Funcionalidade idêntica à original
+- ✅ Performance mantida ou melhorada
+- ✅ Código mais limpo e testável
 
 ---
 
@@ -492,15 +571,84 @@ fs.statfsSync()    // 1+ ocorrência
 
 ---
 
-## PRÓXIMOS PASSOS
+## 🚀 CRONOGRAMA E EXECUÇÃO
 
-1. ✅ **Refatorar DateUtils** - Consolidar todas operações de data em Ad.controller
-2. ✅ **Refatorar TextFormatter** - Extrair 3 métodos de description de Ad.controller
-3. ✅ **Refatorar StringUtils** - Consolidar split, trim, formatPrice
-4. ✅ **Refatorar ArrayUtils** - Substituir loops por métodos utilitários
-5. ✅ **Refatorar ValidationUtils** - Centralizar validações file/length
-6. ✅ **Refatorar UrlUtils** - Consolidar URL building
-7. ✅ **Refatorar HashtagUtils** - Centralizar operações hashtag
-8. ✅ **Revisar FileUtils** - Decidir se cria ou usa File.service
-9. ✅ **Remover fs imports diretos** - Usar abstrações
-10. ✅ **Testar integração** - Garantir que tudo funciona após refatoração
+### **Semana 1:**
+- **Dia 1-2**: Fase 1 (StringUtils, ArrayUtils, HashtagUtils)
+- **Dia 3**: Testes e validação Fase 1
+- **Dia 4-5**: Fase 2 (ValidationUtils, UrlUtils)
+
+### **Semana 2:**
+- **Dia 1-2**: Fase 3 (DateUtils, TextFormatter)
+- **Dia 3**: Testes extensivos e validação manual
+- **Dia 4**: Fase 4 (FileUtils, Limpeza)
+- **Dia 5**: Testes finais e documentação
+
+### **Total Estimado:** 18-20 horas de desenvolvimento
+
+---
+
+## 📊 MÉTRICAS DE SUCESSO
+
+### **Antes vs Depois:**
+| Métrica | Antes | Depois | Melhoria |
+|---------|-------|--------|----------|
+| Linhas de código duplicadas | 250+ | 0 | 100% |
+| Métodos por arquivo | 15+ | 8-10 | 40% |
+| Testabilidade | Baixa | Alta | 300% |
+| Manutenibilidade | Baixa | Alta | 200% |
+
+### **Qualidade:**
+- **Cobertura de testes**: 0% → 80%+
+- **Complexidade ciclomática**: Redução 30%
+- **Acoplamento**: Redução 50%
+
+---
+
+## PRÓXIMOS PASSOS - EXECUÇÃO
+
+### **🎯 AÇÃO IMEDIATA:**
+1. **Criar branch** `refactor/utilities-phase-1`
+2. **Configurar testes** para StringUtils, ArrayUtils, HashtagUtils
+3. **Executar Fase 1** com backup dos métodos
+4. **Validar com dados reais** antes de continuar
+
+### **📋 CHECKLIST POR FASE:**
+- [ ] Backup dos métodos originais
+- [ ] Testes unitários criados
+- [ ] Refatoração implementada
+- [ ] Testes passando
+- [ ] Validação manual
+- [ ] Code review
+- [ ] Merge para main
+
+### **🔄 PROCESSO DE ROLLBACK:**
+1. Identificar problema
+2. Reverter para commit anterior da fase
+3. Analisar causa raiz
+4. Corrigir e refazer testes
+5. Prosseguir com nova implementação
+
+---
+
+## 🎉 BENEFÍCIOS ESPERADOS
+
+### **Técnicos:**
+- **Código DRY**: Eliminação completa de duplicação
+- **Testabilidade**: Lógica isolada e testável
+- **Manutenibilidade**: Mudanças centralizadas
+- **Reusabilidade**: Utilities para novos módulos
+
+### **Negócio:**
+- **Desenvolvimento mais rápido**: Reuso de código
+- **Menos bugs**: Padrões validados e testados
+- **Onboarding fácil**: Código mais organizado
+- **Escalabilidade**: Arquitetura preparada para crescimento
+
+---
+
+## ⚡ CONCLUSÃO
+
+**Plano é VIÁVEL, PROCEDENTE e NECESSÁRIO.** A implementação por fases reduz risco e garante sucesso. O investimento de ~20 horas resultará em código 2-3x mais maintainable e escalável.
+
+**Recomendação:** **EXECUTAR IMEDIATAMENTE** a Fase 1 para validar abordagem antes de prosseguir.
