@@ -4,6 +4,9 @@
  * Encontradas em: ad.controller.js
  */
 
+const ArrayUtils = require('./array.utils');
+const StringUtils = require('./string.utils');
+
 class HashtagUtils {
   /**
    * Normaliza array de strings para hashtags
@@ -11,7 +14,7 @@ class HashtagUtils {
    * Ex: ['promo', '#venda'] -> ['#promo', '#venda']
    */
   static normalizeHashtags(hashtags) {
-    return hashtags.map(hashtag => 
+    return ArrayUtils.map(hashtags, hashtag => 
       hashtag.indexOf('#') > -1 ? hashtag : `#${hashtag}`
     );
   }
@@ -21,14 +24,14 @@ class HashtagUtils {
    */
   static joinHashtags(hashtags) {
     const normalized = this.normalizeHashtags(hashtags);
-    return normalized.join(' ');
+    return StringUtils.join(normalized, ' ');
   }
 
   /**
    * Divide string de hashtags em array
    */
   static splitHashtags(hashtagString) {
-    return hashtagString.split(/\s+/).filter(h => h.length > 0);
+    return ArrayUtils.filter(StringUtils.splitBySeparator(hashtagString, /\s+/), h => h.length > 0);
   }
 
   /**
@@ -36,7 +39,7 @@ class HashtagUtils {
    */
   static removeDuplicates(hashtags) {
     const normalized = this.normalizeHashtags(hashtags);
-    return [...new Set(normalized)];
+    return ArrayUtils.removeDuplicates(normalized);
   }
 
   /**
@@ -61,13 +64,13 @@ class HashtagUtils {
     
     switch(platform.toLowerCase()) {
       case 'twitter':
-        return normalized.slice(0, 10).join(' '); // Limite recomendado
+        return StringUtils.join(normalized.slice(0, 10), ' '); // Limite recomendado
       case 'tiktok':
-        return normalized.slice(0, 20).join(' ');
+        return StringUtils.join(normalized.slice(0, 20), ' ');
       case 'instagram':
-        return normalized.slice(0, 30).join(' ');
+        return StringUtils.join(normalized.slice(0, 30), ' ');
       default:
-        return normalized.join(' ');
+        return StringUtils.join(normalized, ' ');
     }
   }
 }

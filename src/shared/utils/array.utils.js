@@ -70,6 +70,50 @@ class ArrayUtils {
   static difference(array1, array2) {
     return array1.filter(item => !array2.includes(item));
   }
+
+  /**
+   * Substituto para .map() direto
+   */
+  static map(array, mapFn) {
+    return array.map(mapFn);
+  }
+
+  /**
+   * Substituto para .filter() direto
+   */
+  static filter(array, filterFn) {
+    return array.filter(filterFn);
+  }
+
+  /**
+   * Substituto para .forEach() direto
+   */
+  static forEach(array, forEachFn) {
+    array.forEach(forEachFn);
+  }
+
+  /**
+   * Substituto para .push() em loop
+   */
+  static pushToArray(targetArray, items) {
+    if (Array.isArray(items)) {
+      targetArray.push(...items);
+    } else {
+      targetArray.push(items);
+    }
+    return targetArray;
+  }
+
+  /**
+   * Executa operação em array com limite
+   */
+  static forEachWithLimit(array, limit, callback) {
+    array.forEach((item, index) => {
+      if (index < limit) {
+        callback(item, index);
+      }
+    });
+  }
 }
 
 module.exports = ArrayUtils;

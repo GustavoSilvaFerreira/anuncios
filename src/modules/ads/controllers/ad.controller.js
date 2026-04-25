@@ -8,7 +8,7 @@ const { DIR_TO_POST, DIR_TEMP, DIR_VIDEOS, FILE_FOR_CREATE, DIR_TO_CREATE } = re
 const VideoQueue = require('../../videos/services/video-queue.service');
 const ENDPOINTS = require('../../../config/url.config');
 const VideoService = require('../../videos/services/video.service');
-const { Logger, ValidationUtils, StringUtils, HashtagUtils } = require('../../../shared/utils');
+const { Logger, ValidationUtils, StringUtils, HashtagUtils, ArrayUtils } = require('../../../shared/utils');
 
 class Ad {
     magazineLuizaService = null;
@@ -45,10 +45,11 @@ class Ad {
         return `${datePost.getFullYear()}-${monthformated}-${datePost.getDate()}`;
     }
 
-    linkBaseSearchProducts = (codes) => `${ENDPOINTS.wedConecta.search}/${codes.join('+')}/`;
+    linkBaseSearchProducts = (codes) => `${ENDPOINTS.wedConecta.search}/${StringUtils.join(codes, '+')}/`;
 
     async updateVideosName(videoNumber, videoName, videosFiltered) {
-        videosFiltered.forEach(item => {
+        // BACKUP ORIGINAL: videosFiltered.forEach
+        ArrayUtils.forEach(videosFiltered, item => {
             if (item === `${videoNumber}.mp4`) {
                 File.rename(`${DIR_VIDEOS}/${videoNumber}.mp4`, `${DIR_VIDEOS}/${videoName}.mp4`);
             }
@@ -56,22 +57,25 @@ class Ad {
     }
 
     separateCodeTitleAdTitlePostAndHashtag(contentArray) {
-        return contentArray.map(item => {
-            const itemSplited = item.split(';');
-            if (itemSplited.length === 4) {
-                const codes = this.validateThreeCodesForCreate(itemSplited[0]);
-                if (codes) {
-                    return {
-                        codes: itemSplited[0],
-                        titleVideo: itemSplited[1],
-                        titlePost: itemSplited[2],
-                        hashtag: itemSplited[3],
-                        products: []
+        return ArrayUtils.filter(
+            ArrayUtils.map(contentArray, item => {
+                const itemSplited = StringUtils.splitBySeparator(item, ';');
+                if (itemSplited.length === 4) {
+                    const codes = this.validateThreeCodesForCreate(itemSplited[0]);
+                    if (codes) {
+                        return {
+                            codes: itemSplited[0],
+                            titleVideo: itemSplited[1],
+                            titlePost: itemSplited[2],
+                            hashtag: itemSplited[3],
+                            products: []
+                        }
                     }
                 }
-            }
-            return false;
-        }).filter(item => item !== false);
+                return false;
+            }),
+            item => item !== false
+        );
     }
 
     validateThreeCodesForCreate(codesString) {
@@ -120,7 +124,7 @@ class Ad {
             if (!dirExists) await File.mkdir(DIR_TO_CREATE);
             for (const postsDay of contentsForCreatePosts) {
                 const { date } = postsDay;
-                const dateSplit = date.split('-');
+                const dateSplit = StringUtils.splitBySeparator(date, '-');
                 const day = Number(dateSplit[2]);
                 const month = Number(dateSplit[1]);
                 const year = Number(dateSplit[0]);
@@ -157,7 +161,7 @@ class Ad {
                     postDay.posts.push({
                         titlePost,
                         titleVideo,
-                        hashtags: HashtagUtils.normalizeHashtags(hashtag.split(' ')),
+                        hashtags: HashtagUtils.normalizeHashtags(StringUtils.splitBySeparator(hashtag, ' ')),
                         ads: allProducts
                     });
                     countPost++;
@@ -243,7 +247,7 @@ class Ad {
         let count = 1;
 
         for (const anuncio of postDay.posts) {
-            const codes = anuncio.ads.map(ad => ad.code);
+            const codes = ArrayUtils.map(anuncio.ads, ad => ad.code);
             const linkProducts = this.linkBaseSearchProducts(codes);
 
             const { date: { year, month, day } } = postDay;
@@ -277,7 +281,7 @@ class Ad {
     }
 
     getTiktokDescription(titleComom, hashtags) {
-        const title = `${titleComom} - Link na BIO #parceiromagalu #achadinhos #promo #promotion #sale ${hashtags.join(' ')}`
+        const title = `${titleComom} - Link na BIO #parceiromagalu #achadinhos #promo #promotion #sale ${StringUtils.join(hashtags, ' ')}`
         return title;
     }
 
@@ -289,7 +293,7 @@ class Ad {
         description += `Facebook: https://www.facebook.com/wedconecta\n`;
         description += `TikTok: https://www.tiktok.com/@wedconecta\n\n`;
         description += `#shorts da @wedconecta\n`;
-        description += `#achadinhos #achados #parceiromagalu #wedconecta #promoção #promo #promotion #ofertas ${hashtags.join(' ')}\n`;
+        description += `#achadinhos #achados #parceiromagalu #wedconecta #promoção #promo #promotion #ofertas ${StringUtils.join(hashtags, ' ')}\n`;
 
         return { title, description };
     }
@@ -302,7 +306,7 @@ class Ad {
         description += `Instagram: https://www.instagram.com/wedconecta\n`;
         description += `Facebook: https://www.facebook.com/wedconecta\n\n`;
 
-        description += `#achadinhos #achados #parceiromagalu #wedconecta #promoção #promo #promotion #ofertas ${hashtags.join(' ')}`;
+        description += `#achadinhos #achados #parceiromagalu #wedconecta #promoção #promo #promotion #ofertas ${StringUtils.join(hashtags, ' ')}`;
 
         return description;
     }
