@@ -45,10 +45,6 @@ class MagazineLuizaService {
         return resultLi.length >= numberAdByPost;
     }
 
-    formatCodesForSearch(codes) {
-        return StringUtils.join(codes, '+');
-    }
-
     async getProductsByCodesFormated(codesFormated, numberAdByPost) {
         let products = [];
         const $ = await this.loadHtmlCheerio(codesFormated);

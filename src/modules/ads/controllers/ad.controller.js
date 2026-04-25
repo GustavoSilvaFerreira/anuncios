@@ -44,7 +44,7 @@ class Ad {
             ArrayUtils.map(contentArray, item => {
                 const itemSplited = StringUtils.splitBySeparator(item, ';');
                 if (itemSplited.length === 4) {
-                    const codes = this.validateThreeCodesForCreate(itemSplited[0]);
+                    const codes = ValidationUtils.validateThreeCodesForCreate(itemSplited[0], this.numberAdByPost) ? itemSplited[0] : null;
                     if (codes) {
                         return {
                             codes: itemSplited[0],
@@ -132,7 +132,7 @@ class Ad {
                     let countProduct = 1
                     for (const product of allProducts) {
                         const linkImg = product.imgLink;
-                        const ext = this.getExtension(linkImg);
+                        const ext = StringUtils.getExtension(linkImg);
                         const imgName = `img-for-create-video-post-${countPost}-image-${countProduct}-${product.code}`;
                         const pathImg = join(pathDateTitle, `${imgName}.${ext}`);
                         product['imgPath'] = pathImg;
@@ -261,37 +261,6 @@ class Ad {
             await FileUtils.writeFile(join(pathDateTitle, fileName), StringUtils.join(content, ''));
             count++;
         }
-    }
-
-    getTiktokDescription(titleComom, hashtags) {
-        const title = `${titleComom} - Link na BIO #parceiromagalu #achadinhos #promo #promotion #sale ${StringUtils.join(hashtags, ' ')}`
-        return title;
-    }
-
-    getYoutubeDescription(titleComom, linkProducts, hashtags) {
-        const title = `${titleComom} #shorts da @wedconecta\n\n`;
-        let description = `Link para os produtos: ${linkProducts}\n\n`;
-        description += `Siga nossas redes sociais:\n`;
-        description += `Instagram: https://www.instagram.com/wedconecta\n`;
-        description += `Facebook: https://www.facebook.com/wedconecta\n`;
-        description += `TikTok: https://www.tiktok.com/@wedconecta\n\n`;
-        description += `#shorts da @wedconecta\n`;
-        description += `#achadinhos #achados #parceiromagalu #wedconecta #promoção #promo #promotion #ofertas ${StringUtils.join(hashtags, ' ')}\n`;
-
-        return { title, description };
-    }
-
-    getMetaDescription(titleComom, hashtags) {
-        let description = `${titleComom}\nLink da loja na BIO\n\n`;
-        description += `Siga nossas redes sociais:\n`;
-        description += `YouTube: https://www.youtube.com/@wedconecta\n`;
-        description += `TikTok: https://www.tiktok.com/@wedconecta\n`;
-        description += `Instagram: https://www.instagram.com/wedconecta\n`;
-        description += `Facebook: https://www.facebook.com/wedconecta\n\n`;
-
-        description += `#achadinhos #achados #parceiromagalu #wedconecta #promoção #promo #promotion #ofertas ${StringUtils.join(hashtags, ' ')}`;
-
-        return description;
     }
 }
 

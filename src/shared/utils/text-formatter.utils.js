@@ -32,27 +32,39 @@ class TextFormatter {
    * Formato específico para YouTube
    */
   static formatYoutubeDescription(title, url, hashtags) {
-    return `${title} #shorts\n\n` +
-           `Link: ${url}\n\n` +
-           `Siga nossas redes:\n` +
-           `Instagram: https://instagram.com/wedconecta\n` +
-           `TikTok: https://tiktok.com/@wedconecta\n` +
-           `Facebook: https://facebook.com/wedconecta\n\n` +
-           `${hashtags}`;
+    const titleFormatted = `${title} #shorts da @wedconecta\n\n`;
+    let description = `Link para os produtos: ${url}\n\n`;
+    description += `Siga nossas redes sociais:\n`;
+    description += `Instagram: https://www.instagram.com/wedconecta\n`;
+    description += `Facebook: https://www.facebook.com/wedconecta\n`;
+    description += `TikTok: https://www.tiktok.com/@wedconecta\n\n`;
+    description += `#shorts da @wedconecta\n`;
+    description += `#achadinhos #achados #parceiromagalu #wedconecta #promoção #promo #promotion #ofertas ${hashtags}\n`;
+
+    return { title: titleFormatted, description: description.trim() };
   }
 
   /**
    * Formato específico para TikTok
    */
   static formatTiktokDescription(title, hashtags) {
-    return `${title}\nLink na BIO\n\n${hashtags}`;
+    return `${title} - Link na BIO #parceiromagalu #achadinhos #promo #promotion #sale ${hashtags}`;
   }
 
   /**
-   * Formato específico para Instagram
+   * Formato específico para Instagram/Meta
    */
   static formatInstagramDescription(title, url, hashtags) {
-    return `${title}\nLink na BIO\n\n${hashtags}`;
+    let description = `${title}\nLink da loja na BIO\n\n`;
+    description += `Siga nossas redes sociais:\n`;
+    description += `YouTube: https://www.youtube.com/@wedconecta\n`;
+    description += `TikTok: https://www.tiktok.com/@wedconecta\n`;
+    description += `Instagram: https://www.instagram.com/wedconecta\n`;
+    description += `Facebook: https://www.facebook.com/wedconecta\n\n`;
+
+    description += `#achadinhos #achados #parceiromagalu #wedconecta #promoção #promo #promotion #ofertas ${hashtags}`;
+
+    return description;
   }
 
   /**
