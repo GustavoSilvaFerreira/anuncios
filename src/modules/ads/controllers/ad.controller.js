@@ -8,7 +8,7 @@ const { DIR_TO_POST, DIR_TEMP, DIR_VIDEOS, FILE_FOR_CREATE, DIR_TO_CREATE } = re
 const VideoQueue = require('../../videos/services/video-queue.service');
 const ENDPOINTS = require('../../../config/url.config');
 const VideoService = require('../../videos/services/video.service');
-const { Logger, ValidationUtils, StringUtils, HashtagUtils, ArrayUtils } = require('../../../shared/utils');
+const { Logger, ValidationUtils, StringUtils, HashtagUtils, ArrayUtils, DateUtils, TextFormatter } = require('../../../shared/utils');
 
 class Ad {
     magazineLuizaService = null;
@@ -30,6 +30,7 @@ class Ad {
         this.videoService = videoService;
     }
 
+    // BACKUP ORIGINAL: Métodos de data
     getDatePlusDay(date, days) {
         date.setDate(date.getDate() + days);
         return this.getDate(date.getFullYear(), date.getMonth() + 1, date.getDate());
@@ -95,7 +96,7 @@ class Ad {
         const contentsForCreatePosts = [];
         const codeInvalid = [];
         let { year, month, day } = dateFirstPost;
-        let datePost = this.getDate(year, month, day);
+        let datePost = DateUtils.getDate(year, month, day);
         const contentFileSplited = await File.txtForArrayString(FILE_FOR_CREATE);
         const contents = this.separateCodeTitleAdTitlePostAndHashtag(contentFileSplited);
         for (const content of contents) {
@@ -108,11 +109,11 @@ class Ad {
                 tempContents.push(content);
                 if (tempContents.length === this.numberPostsByDay) {
                     contentsForCreatePosts.push({
-                        date: this.getDateFormated(datePost),
+                        date: DateUtils.getDateFormated(datePost),
                         contents: tempContents
                     });
                     tempContents = [];
-                    datePost = this.getDatePlusDay(datePost, 1);
+                    datePost = DateUtils.getDatePlusDay(datePost, 1);
                 }
             } else {
                 codeInvalid.push(content);
@@ -129,7 +130,7 @@ class Ad {
                 const month = Number(dateSplit[1]);
                 const year = Number(dateSplit[0]);
 
-                const datePost = this.getDateFormated(this.getDate(year, month, day));
+                const datePost = DateUtils.getDateFormated(DateUtils.getDate(year, month, day));
                 const pathDateTitle = join(DIR_TO_CREATE, datePost);
                 const dirDateExists = File.existsSync(pathDateTitle);
                 if (!dirDateExists) await File.mkdir(pathDateTitle);
@@ -190,7 +191,7 @@ class Ad {
         const dirExists = File.existsSync(DIR_TO_POST);
         if (!dirExists) await File.mkdir(DIR_TO_POST);
         const { date: { year, month, day } } = postDay;
-        const datePost = this.getDateFormated(this.getDate(year, month, day));
+        const datePost = DateUtils.getDateFormated(DateUtils.getDate(year, month, day));
         const pathDateTitle = join(DIR_TO_POST, datePost);
         const dirDateExists = File.existsSync(pathDateTitle);
         if (!dirDateExists) await File.mkdir(pathDateTitle);
@@ -252,10 +253,10 @@ class Ad {
 
             const { date: { year, month, day } } = postDay;
             const { titlePost, hashtags } = anuncio;
-            const youtube = this.getYoutubeDescription(titlePost, linkProducts, hashtags);
-            const tiktok = this.getTiktokDescription(titlePost, hashtags);
-            const meta = this.getMetaDescription(titlePost, hashtags);
-            const datePost = this.getDateFormated(this.getDate(year, month, day));
+            const youtube = TextFormatter.formatYoutubeDescription(titlePost, linkProducts, StringUtils.join(hashtags, ' '));
+            const tiktok = TextFormatter.formatTiktokDescription(titlePost, StringUtils.join(hashtags, ' '));
+            const meta = TextFormatter.formatInstagramDescription(titlePost, '', StringUtils.join(hashtags, ' '));
+            const datePost = DateUtils.getDateFormated(DateUtils.getDate(year, month, day));
 
             const pathDateTitle = join(DIR_TO_POST, datePost);
             const dirDateExists = File.existsSync(pathDateTitle);
@@ -275,11 +276,12 @@ class Ad {
             content.push(tiktok);
 
             const fileName = `${count}_${titlePost}_${randomUUID()}.txt`;
-            await File.writeFile(join(pathDateTitle, fileName), content);
+            await File.writeFile(join(pathDateTitle, fileName), StringUtils.join(content, ''));
             count++;
         }
     }
 
+    // BACKUP ORIGINAL: Métodos de texto
     getTiktokDescription(titleComom, hashtags) {
         const title = `${titleComom} - Link na BIO #parceiromagalu #achadinhos #promo #promotion #sale ${StringUtils.join(hashtags, ' ')}`
         return title;

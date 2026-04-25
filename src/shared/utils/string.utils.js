@@ -101,6 +101,13 @@ class StringUtils {
   static join(array, separator = '') {
     return array.join(separator);
   }
+
+  /**
+   * Adiciona zeros à esquerda de um número
+   */
+  static padNumber(num, length = 2) {
+    return String(num).padStart(length, '0');
+  }
 }
 
 module.exports = StringUtils;
