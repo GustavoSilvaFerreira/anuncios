@@ -1,14 +1,13 @@
 const { randomUUID } = require('crypto');
 const MagazineLuizaService = require('../services/magazine-luiza.service');
 const RestService = require('../../storage/services/rest.service');
-const File = require('../../storage/services/file.service');
 const { join } = require('path');
 const adJson = require('../ad.json');
 const { DIR_TO_POST, DIR_TEMP, DIR_VIDEOS, FILE_FOR_CREATE, DIR_TO_CREATE } = require('../../../config/directory.config');
 const VideoQueue = require('../../videos/services/video-queue.service');
 const ENDPOINTS = require('../../../config/url.config');
 const VideoService = require('../../videos/services/video.service');
-const { Logger, ValidationUtils, StringUtils, HashtagUtils, ArrayUtils, DateUtils, TextFormatter } = require('../../../shared/utils');
+const { Logger, ValidationUtils, StringUtils, HashtagUtils, ArrayUtils, DateUtils, TextFormatter, FileUtils } = require('../../../shared/utils');
 
 class Ad {
     magazineLuizaService = null;
@@ -30,29 +29,12 @@ class Ad {
         this.videoService = videoService;
     }
 
-    // BACKUP ORIGINAL: Métodos de data
-    getDatePlusDay(date, days) {
-        date.setDate(date.getDate() + days);
-        return this.getDate(date.getFullYear(), date.getMonth() + 1, date.getDate());
-    }
-
-    getDate(year, month, day) {
-        return new Date(year, month - 1, day);
-    }
-
-    getDateFormated(date) {
-        const datePost = date;
-        const monthformated = datePost.getMonth() >= 9 ? datePost.getMonth() + 1 : `0${datePost.getMonth() + 1}`;
-        return `${datePost.getFullYear()}-${monthformated}-${datePost.getDate()}`;
-    }
-
     linkBaseSearchProducts = (codes) => `${ENDPOINTS.wedConecta.search}/${StringUtils.join(codes, '+')}/`;
 
     async updateVideosName(videoNumber, videoName, videosFiltered) {
-        // BACKUP ORIGINAL: videosFiltered.forEach
-        ArrayUtils.forEach(videosFiltered, item => {
+            ArrayUtils.forEach(videosFiltered, item => {
             if (item === `${videoNumber}.mp4`) {
-                File.rename(`${DIR_VIDEOS}/${videoNumber}.mp4`, `${DIR_VIDEOS}/${videoName}.mp4`);
+                FileUtils.rename(`${DIR_VIDEOS}/${videoNumber}.mp4`, `${DIR_VIDEOS}/${videoName}.mp4`);
             }
         });
     }
@@ -97,7 +79,7 @@ class Ad {
         const codeInvalid = [];
         let { year, month, day } = dateFirstPost;
         let datePost = DateUtils.getDate(year, month, day);
-        const contentFileSplited = await File.txtForArrayString(FILE_FOR_CREATE);
+        const contentFileSplited = await FileUtils.txtForArrayString(FILE_FOR_CREATE);
         const contents = this.separateCodeTitleAdTitlePostAndHashtag(contentFileSplited);
         for (const content of contents) {
             const { codes, titleAd, titlePost, hashtag } = content;
@@ -121,8 +103,8 @@ class Ad {
         }
 
         if (contentsForCreatePosts.length > 0) {
-            const dirExists = File.existsSync(DIR_TO_CREATE);
-            if (!dirExists) await File.mkdir(DIR_TO_CREATE);
+            const dirExists = FileUtils.existsSync(DIR_TO_CREATE);
+            if (!dirExists) await FileUtils.mkdir(DIR_TO_CREATE);
             for (const postsDay of contentsForCreatePosts) {
                 const { date } = postsDay;
                 const dateSplit = StringUtils.splitBySeparator(date, '-');
@@ -132,8 +114,8 @@ class Ad {
 
                 const datePost = DateUtils.getDateFormated(DateUtils.getDate(year, month, day));
                 const pathDateTitle = join(DIR_TO_CREATE, datePost);
-                const dirDateExists = File.existsSync(pathDateTitle);
-                if (!dirDateExists) await File.mkdir(pathDateTitle);
+                const dirDateExists = FileUtils.existsSync(pathDateTitle);
+                if (!dirDateExists) await FileUtils.mkdir(pathDateTitle);
 
                 const postDay = {
                     date: { day, month, year },
@@ -169,9 +151,9 @@ class Ad {
                 }
 
                 const pathJsonAd = join(pathDateTitle, `for-create-post-Ad.json`);
-                await File.writeFile(pathJsonAd, JSON.stringify(postDay));
+                await FileUtils.writeFile(pathJsonAd, JSON.stringify(postDay));
                 const pathTxtForCreateVideo = join(pathDateTitle, `for-create-videos.txt`);
-                await File.writeFile(pathTxtForCreateVideo, print);
+                await FileUtils.writeFile(pathTxtForCreateVideo, print);
 
                 await this.createVideos(postDay);
                 await this.step2FilesForTitleAndComments(postDay);
@@ -188,13 +170,13 @@ class Ad {
     }
 
     async createVideos(postDay) {
-        const dirExists = File.existsSync(DIR_TO_POST);
-        if (!dirExists) await File.mkdir(DIR_TO_POST);
+        const dirExists = FileUtils.existsSync(DIR_TO_POST);
+        if (!dirExists) await FileUtils.mkdir(DIR_TO_POST);
         const { date: { year, month, day } } = postDay;
         const datePost = DateUtils.getDateFormated(DateUtils.getDate(year, month, day));
         const pathDateTitle = join(DIR_TO_POST, datePost);
-        const dirDateExists = File.existsSync(pathDateTitle);
-        if (!dirDateExists) await File.mkdir(pathDateTitle);
+        const dirDateExists = FileUtils.existsSync(pathDateTitle);
+        if (!dirDateExists) await FileUtils.mkdir(pathDateTitle);
 
         Logger.section(`Criação de Vídeos - Processando ${postDay.posts.length} vídeos para ${datePost}`);
 
@@ -243,8 +225,8 @@ class Ad {
     }
 
     async step2FilesForTitleAndComments(postDay) {
-        const dirExists = File.existsSync(DIR_TO_POST);
-        if (!dirExists) await File.mkdir(DIR_TO_POST);
+        const dirExists = FileUtils.existsSync(DIR_TO_POST);
+        if (!dirExists) await FileUtils.mkdir(DIR_TO_POST);
         let count = 1;
 
         for (const anuncio of postDay.posts) {
@@ -259,8 +241,8 @@ class Ad {
             const datePost = DateUtils.getDateFormated(DateUtils.getDate(year, month, day));
 
             const pathDateTitle = join(DIR_TO_POST, datePost);
-            const dirDateExists = File.existsSync(pathDateTitle);
-            if (!dirDateExists) await File.mkdir(pathDateTitle);
+            const dirDateExists = FileUtils.existsSync(pathDateTitle);
+            if (!dirDateExists) await FileUtils.mkdir(pathDateTitle);
 
             const content = [`Postar as ${this.hours[count - 1]}\n\n`];
             content.push(`${datePost} ${titlePost}\n`);
@@ -276,12 +258,11 @@ class Ad {
             content.push(tiktok);
 
             const fileName = `${count}_${titlePost}_${randomUUID()}.txt`;
-            await File.writeFile(join(pathDateTitle, fileName), StringUtils.join(content, ''));
+            await FileUtils.writeFile(join(pathDateTitle, fileName), StringUtils.join(content, ''));
             count++;
         }
     }
 
-    // BACKUP ORIGINAL: Métodos de texto
     getTiktokDescription(titleComom, hashtags) {
         const title = `${titleComom} - Link na BIO #parceiromagalu #achadinhos #promo #promotion #sale ${StringUtils.join(hashtags, ' ')}`
         return title;

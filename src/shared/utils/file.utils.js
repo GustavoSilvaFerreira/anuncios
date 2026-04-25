@@ -1,8 +1,11 @@
 /**
  * File Utilities
  * Funções reutilizáveis de manipulação de arquivos
- * Encontradas em: ad.controller.js
+ * Encontradas em: ad.controller.js, video.service.js
  */
+
+const StringUtils = require('./string.utils');
+const ArrayUtils = require('./array.utils');
 
 class FileUtils {
   /**
@@ -11,14 +14,14 @@ class FileUtils {
    */
   static findFileByNumber(videoNumber, videosFiltered, fileExtension = '.mp4') {
     const fileName = `${videoNumber}${fileExtension}`;
-    return videosFiltered.find(item => item === fileName);
+    return ArrayUtils.findOrNull(videosFiltered, item => item === fileName);
   }
 
   /**
    * Gera nome de arquivo com contador e extensão
    */
   static generateFileName(counter, name, extension, separator = '_') {
-    const sanitizedName = name.replace(/[^a-zA-Z0-9\s-]/g, '');
+    const sanitizedName = StringUtils.sanitizeAdsCharacter(name).replace(/\s+/g, ' ');
     return `${counter}${separator}${sanitizedName}.${extension}`;
   }
 
@@ -47,8 +50,7 @@ class FileUtils {
    * Retorna extensão de arquivo
    */
   static getFileExtension(filePath) {
-    const parts = filePath.split('.');
-    return parts[parts.length - 1].toLowerCase();
+    return StringUtils.getExtension(filePath);
   }
 
   /**
@@ -76,6 +78,46 @@ class FileUtils {
   static generateUniqueFileName(baseName, extension, useTimestamp = true) {
     const timestamp = useTimestamp ? Date.now() : Math.random().toString(36).substr(2, 9);
     return `${baseName}_${timestamp}.${extension}`;
+  }
+
+  /**
+   * Verifica se arquivo existe (wrapper para File.service)
+   */
+  static existsSync(filePath) {
+    const File = require('../../modules/storage/services/file.service');
+    return File.existsSync(filePath);
+  }
+
+  /**
+   * Cria diretório (wrapper para File.service)
+   */
+  static async mkdir(dirPath) {
+    const File = require('../../modules/storage/services/file.service');
+    return File.mkdir(dirPath);
+  }
+
+  /**
+   * Escreve arquivo (wrapper para File.service)
+   */
+  static async writeFile(filePath, content) {
+    const File = require('../../modules/storage/services/file.service');
+    return File.writeFile(filePath, content);
+  }
+
+  /**
+   * Renomeia arquivo (wrapper para File.service)
+   */
+  static rename(oldPath, newPath) {
+    const File = require('../../modules/storage/services/file.service');
+    return File.rename(oldPath, newPath);
+  }
+
+  /**
+   * Lê arquivo como array de strings (wrapper para File.service)
+   */
+  static async txtForArrayString(filePath) {
+    const File = require('../../modules/storage/services/file.service');
+    return File.txtForArrayString(filePath);
   }
 }
 
