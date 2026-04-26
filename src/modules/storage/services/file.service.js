@@ -1,5 +1,5 @@
 const fs = require('fs');
-const { readFile, writeFile, mkdir, readdir, rename } = require('fs/promises');
+const { readFile, writeFile, mkdir, readdir, rename, stat } = require('fs/promises');
 // const { error } = require('../../../config/constants');
 
 // const DEFAULT_OPTIONS = {
@@ -45,6 +45,10 @@ class File {
 
     static createWriteStream(filePath) {
         return fs.createWriteStream(filePath);
+    }
+
+    static async stat(filePath) {
+        return await stat(filePath);
     }
 
     // static async csvToJson(filePath) {

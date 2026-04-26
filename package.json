@@ -7,6 +7,7 @@
     "postinstall": "node post-install.js",
     "start": "node main.js",
     "youtube:listvideos": "node test.js",
+    "youtube:test": "node test-youtube-upload.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
