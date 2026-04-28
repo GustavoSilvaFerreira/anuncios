@@ -83,12 +83,22 @@ class YouTubePublisherService {
             
             Logger.info(`Vídeo encontrado: ${videoPath}`);
             
-            // 2. Fazer upload para YouTube diretamente
-            const uploadResult = await this.youtubeService.uploadVideo(videoPath, {
+            // 2. Usar metadados do YouTube se disponíveis, senão usar padrão
+            const metadata = postData.youtubeMetadata || {
                 title: postData.titleVideo,
-                description: postData.youtubeDescription,
-                tags: postData.hashtags || [],
-                categoryId: '22', // Entertainment
+                description: postData.youtubeDescription || '',
+                hashtags: postData.hashtags || [],
+                playlist: 'Promoções diárias',
+                category: '22'
+            };
+            
+            // 3. Fazer upload com metadados completos
+            const uploadResult = await this.youtubeService.uploadVideoWithMetadata(videoPath, {
+                title: metadata.title,
+                description: metadata.description,
+                hashtags: metadata.hashtags,
+                category: metadata.category,
+                playlist: metadata.playlist,
                 privacy: 'private' // Private inicialmente
             });
             Logger.info(`Vídeo uploadado: ${uploadResult.videoId}`);

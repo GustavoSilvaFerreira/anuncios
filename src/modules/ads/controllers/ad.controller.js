@@ -17,7 +17,7 @@ class Ad {
     videoService = null;
     numberAdByPost = 3;
     hours = [
-        '18:30'
+        '12:30'
     ];
     numberPostsByDay = this.hours.length;
     anuncios = adJson;
@@ -44,7 +44,7 @@ class Ad {
     linkBaseSearchProducts = (codes) => `${ENDPOINTS.wedConecta.search}/${StringUtils.join(codes, '+')}/`;
 
     async updateVideosName(videoNumber, videoName, videosFiltered) {
-            ArrayUtils.forEach(videosFiltered, item => {
+        ArrayUtils.forEach(videosFiltered, item => {
             if (item === `${videoNumber}.mp4`) {
                 FileUtils.rename(`${DIR_VIDEOS}/${videoNumber}.mp4`, `${DIR_VIDEOS}/${videoName}.mp4`);
             }
@@ -78,6 +78,10 @@ class Ad {
     }
 
     async step1FilesForCreateVideos(dateFirstPost) {
+        const postDay = {
+            date: {},
+            posts: []
+        }
         let tempContents = [];
         const contentsForCreatePosts = [];
         const codeInvalid = [];
@@ -121,10 +125,7 @@ class Ad {
                 const dirDateExists = FileUtils.existsSync(pathDateTitle);
                 if (!dirDateExists) await FileUtils.mkdir(pathDateTitle);
 
-                const postDay = {
-                    date: { day, month, year },
-                    posts: []
-                }
+                postDay.date = { day, month, year };
 
                 let print = `Posts do dia ${day.length > 1 ? day : `0${day}`}-${month.length > 1 ? month : `0${month}`}-${year}\n\n`;
                 let countPost = 1
@@ -160,7 +161,7 @@ class Ad {
                 await FileUtils.writeFile(pathTxtForCreateVideo, print);
 
                 await this.createVideos(postDay);
-                await this.step2FilesForTitleAndComments(postDay);
+                await this.step2FilesForTitleAndComments(postDay); // Extrai metadados e cria arquivos .txt
             }
         }
 
@@ -171,6 +172,7 @@ class Ad {
         if (codeInvalid.length > 0) {
             Logger.warn('Códigos inválidos', codeInvalid);
         }
+        return postDay;
     }
 
     async createVideos(postDay) {
@@ -244,6 +246,18 @@ class Ad {
             const meta = TextFormatter.formatInstagramDescription(titlePost, '', StringUtils.join(hashtags, ' '));
             const datePost = DateUtils.getDateFormated(DateUtils.getDate(year, month, day));
 
+            // Extrair e anexar metadados do YouTube ao objeto anuncio
+            anuncio.youtubeMetadata = {
+                title: youtube.title,
+                description: youtube.description,
+                hashtags: hashtags,
+                playlist: 'Promoções diárias',
+                category: '22'
+            };
+
+            // Adicionar horário de agendamento dinâmico
+            anuncio.scheduleHour = this.hours[count - 1];
+
             const pathDateTitle = join(DIR_TO_POST, datePost);
             const dirDateExists = FileUtils.existsSync(pathDateTitle);
             if (!dirDateExists) await FileUtils.mkdir(pathDateTitle);
@@ -265,6 +279,7 @@ class Ad {
             await FileUtils.writeFile(join(pathDateTitle, fileName), StringUtils.join(content, ''));
             count++;
         }
+        // return postDay;
     }
 
     /**
@@ -273,42 +288,49 @@ class Ad {
      * @param {Date} publishAt - Data de publicação (opcional)
      * @returns {Promise<Object>} Resultado
      */
-    async publishExistingVideos(postDay, publishAt = null) {
+    async publishExistingVideos(postDay, index) {
+        // async publishExistingVideos(postDay, publishAt = null) {
         try {
             Logger.info(`Iniciando publicação de vídeos existentes no YouTube`);
 
-            // 1. Gerar conteúdo para os vídeos já criados
-            await this.step2FilesForTitleAndComments(postDay);
+            const baseDate = new Date(postDay.date.year, postDay.date.month - 1, postDay.date.day);
+            const publishDate = new Date(baseDate);
+            const postHour = postDay.posts[index].scheduleHour || this.hours[0]; // Fallback para primeiro horário
+            const [hour, minute] = postHour.split(':');
+            publishDate.setHours(parseInt(hour), parseInt(minute), 0, 0);
+            publishDate.setDate(publishDate.getDate() + index); // +1 dia a partir da data do post
 
             // 2. Processar cada post (vídeos já existem)
             const results = [];
-            for (const postData of postDay.posts) {
-                const videoPath = await this.findCreatedVideoPath(postData, postDay);
+            const postData = postDay.posts[index];
+            // Logger.info(`Processando post: ${JSON.stringify(postDay)}`);
+            // for (const postData of postDay.posts) {
+            const videoPath = await this.findCreatedVideoPath(postData, postDay);
 
-                if (videoPath) {
-                    const result = await this.youtubePublisher.publishExistingVideo(
-                        postData,
-                        videoPath,
-                        publishAt
-                    );
-                    results.push(result);
-                    Logger.success(`Vídeo publicado: ${postData.titleVideo}`);
-                } else {
-                    Logger.warn(`Vídeo não encontrado para: ${postData.titleVideo}`);
-                    results.push({
-                        success: false,
-                        error: 'Vídeo não encontrado localmente',
-                        titleVideo: postData.titleVideo
-                    });
-                }
+            if (videoPath) {
+                const result = await this.youtubePublisher.publishExistingVideo(
+                    postData,
+                    videoPath,
+                    publishDate
+                );
+                results.push(result);
+                Logger.success(`Vídeo publicado: ${postData.youtubeMetadata.title}`);
+            } else {
+                Logger.warn(`Vídeo não encontrado para: ${postData.titleVideo}`);
+                results.push({
+                    success: false,
+                    error: 'Vídeo não encontrado localmente',
+                    titleVideo: postData.titleVideo
+                });
             }
+            // }
+            Logger.info(`Vídeo agendado: ${postData.titleVideo} para ${publishDate.toLocaleString('pt-BR')}`);
 
             return {
                 success: true,
                 processed: results.length,
                 results: results
             };
-
         } catch (error) {
             Logger.error('Erro ao publicar vídeos existentes', error);
             throw error;
@@ -322,7 +344,7 @@ class Ad {
             const pathDateTitle = join(DIR_TO_POST, datePost);
 
             Logger.info(`Buscando vídeos em: ${pathDateTitle}`);
-            Logger.info(`Título do vídeo: ${postData.titleVideo}`);
+            Logger.info(`Título do vídeo: ${postData.titlePost}`);
 
             const files = await File.readdir(pathDateTitle);
             const videoFiles = files.filter(file => file.endsWith('.mp4'));
@@ -331,8 +353,8 @@ class Ad {
             Logger.info(`Arquivos: ${videoFiles.join(', ')}`);
 
             // Busca mais flexível - remove caracteres especiais e busca por partes
-            const titleClean = postData.titleVideo.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
-            
+            const titleClean = postData.titlePost.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
             for (const file of videoFiles) {
                 const filePath = join(pathDateTitle, file);
                 const stats = await File.stat(filePath);
@@ -346,7 +368,7 @@ class Ad {
                 }
             }
 
-            Logger.warn(`Nenhum vídeo encontrado para: ${postData.titleVideo}`);
+            Logger.warn(`Nenhum vídeo encontrado para: ${postData.titlePost}`);
             return null;
         } catch (error) {
             Logger.error('Erro ao encontrar vídeo criado', error);
@@ -362,36 +384,40 @@ class Ad {
     async scheduleVideosFromPostDay(postDay) {
         try {
             Logger.info(`Agendando vídeos para data base: ${postDay.date.day}/${postDay.date.month}/${postDay.date.year}`);
-            
+
             // Usa a data do post como base (ex: 27/04/2026)
             const baseDate = new Date(postDay.date.year, postDay.date.month - 1, postDay.date.day);
-            
+
             // Agenda cada vídeo para dias consecutivos
             const results = [];
             for (let i = 0; i < postDay.posts.length; i++) {
-                const publishDate = new Date(baseDate);
-                publishDate.setHours(18, 30, 0, 0);
-                publishDate.setDate(publishDate.getDate() + i); // +1 dia a partir da data do post
-                
-                // Criar postDay individual com o post específico
-                const individualPostDay = {
-                    date: postDay.date,
-                    posts: [postDay.posts[i]] // Array com apenas este post
-                };
-                
-                const result = await this.publishExistingVideos(individualPostDay, publishDate);
+                // const publishDate = new Date(baseDate);
+                // Usar o horário dinâmico do objeto anuncio
+                // const postHour = postDay.posts[i].scheduleHour || this.hours[0]; // Fallback para primeiro horário
+                // const [hour, minute] = postHour.split(':');
+                // publishDate.setHours(parseInt(hour), parseInt(minute), 0, 0);
+                // publishDate.setDate(publishDate.getDate() + i); // +1 dia a partir da data do post
+
+                // Criar postDay individual com o post específico, preservando metadados
+                // const individualPostDay = {
+                //     date: postDay.date,
+                //     posts: [postDay.posts[i]] // Spread operator já preserva todas as propriedades
+                // };
+
+                const result = await this.publishExistingVideos(postDay, i);
+                // const result = await this.publishExistingVideos(individualPostDay, publishDate);
                 results.push(result);
-                
-                Logger.info(`Vídeo agendado: ${postDay.posts[i].titleVideo} para ${publishDate.toLocaleString('pt-BR')}`);
+
+                // Logger.info(`Vídeo agendado: ${postDay.posts[i].titleVideo} para ${publishDate.toLocaleString('pt-BR')}`);
             }
-            
+
             return {
                 success: true,
                 scheduled: results.length,
                 results: results,
                 baseDate: baseDate.toLocaleDateString('pt-BR')
             };
-            
+
         } catch (error) {
             Logger.error('Erro ao agendar vídeos a partir do postDay', error);
             throw error;

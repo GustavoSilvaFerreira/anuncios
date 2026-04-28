@@ -18,7 +18,7 @@ const [day, month, year] = dateFirstPostTxt.split('/').map(Number);
         
         // 1. Criar vídeos (fluxo original)
         console.log(' Etapa 1: Criando vídeos...');
-        await adverts.step1FilesForCreateVideos(dateFirstPost);
+        const postDay = await adverts.step1FilesForCreateVideos(dateFirstPost);
         
         // 2. Fazer upload e agendamento para YouTube
         console.log(' Etapa 2: Upload e agendamento no YouTube...');
@@ -31,13 +31,13 @@ const [day, month, year] = dateFirstPostTxt.split('/').map(Number);
         const datePost = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
         const postJsonPath = path.join(DIR_TO_CREATE, datePost, 'for-create-post-Ad.json');
         
-        if (!fs.existsSync(postJsonPath)) {
-            console.error(' Arquivo postDay não encontrado:', postJsonPath);
-            process.exit(1);
-        }
+        // if (!fs.existsSync(postJsonPath)) {
+        //     console.error(' Arquivo postDay não encontrado:', postJsonPath);
+        //     process.exit(1);
+        // }
         
-        const postDay = JSON.parse(fs.readFileSync(postJsonPath, 'utf8'));
-        console.log(` PostDay carregado com ${postDay.posts.length} posts`);
+        // const postDay = JSON.parse(fs.readFileSync(postJsonPath, 'utf8'));
+        console.log(` PostDay com ${postDay.posts.length} posts`);
         
         // Agendar vídeos baseado na data do post (29/04/2026)
         const result = await adverts.scheduleVideosFromPostDay(postDay);

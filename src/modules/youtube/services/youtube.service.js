@@ -342,6 +342,132 @@ class YoutubeService {
             return null;
         }
     }
+
+    /**
+     * Busca ou cria uma playlist
+     * @param {string} playlistTitle - Título da playlist
+     * @returns {Promise<string>} ID da playlist
+     */
+    async getOrCreatePlaylist(playlistTitle) {
+        try {
+            const youtube = google.youtube({
+                version: 'v3',
+                auth: await this._getOAuth2Client()
+            });
+
+            // Buscar playlist existente
+            const listResponse = await youtube.playlists.list({
+                part: 'snippet',
+                mine: true,
+                maxResults: 50
+            });
+
+            const existingPlaylist = listResponse.data.items.find(playlist => 
+                playlist.snippet.title === playlistTitle
+            );
+
+            if (existingPlaylist) {
+                Logger.info(`Playlist encontrada: ${playlistTitle}`);
+                return existingPlaylist.id;
+            }
+
+            // Criar nova playlist
+            const createResponse = await youtube.playlists.insert({
+                part: 'snippet,status',
+                requestBody: {
+                    snippet: {
+                        title: playlistTitle,
+                        description: `Playlist automática: ${playlistTitle}`,
+                        defaultLanguage: 'pt'
+                    },
+                    status: {
+                        privacy: 'public'
+                    }
+                }
+            });
+
+            Logger.success(`Playlist criada: ${playlistTitle}`);
+            return createResponse.data.id;
+
+        } catch (error) {
+            Logger.error('Erro ao buscar/criar playlist', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Adiciona vídeo a uma playlist
+     * @param {string} videoId - ID do vídeo
+     * @param {string} playlistId - ID da playlist
+     * @returns {Promise<boolean>} Sucesso da operação
+     */
+    async addVideoToPlaylist(videoId, playlistId) {
+        try {
+            const youtube = google.youtube({
+                version: 'v3',
+                auth: await this._getOAuth2Client()
+            });
+
+            await youtube.playlistItems.insert({
+                part: 'snippet',
+                requestBody: {
+                    snippet: {
+                        playlistId: playlistId,
+                        resourceId: {
+                            kind: 'youtube#video',
+                            videoId: videoId
+                        }
+                    }
+                }
+            });
+
+            Logger.success(`Vídeo ${videoId} adicionado à playlist`);
+            return true;
+
+        } catch (error) {
+            Logger.error('Erro ao adicionar vídeo à playlist', error);
+            return false;
+        }
+    }
+
+    /**
+     * Upload completo com metadata e playlist
+     * @param {string} videoPath - Caminho do vídeo
+     * @param {Object} metadata - Metadados completos
+     * @returns {Promise<Object>} Resultado do upload
+     */
+    async uploadVideoWithMetadata(videoPath, metadata = {}) {
+        try {
+            // 1. Upload básico
+            const uploadResult = await this.uploadVideo(videoPath, {
+                title: metadata.title,
+                description: metadata.description,
+                tags: metadata.hashtags,
+                categoryId: metadata.category,
+                privacy: 'private'
+            });
+
+            // 2. Adicionar à playlist se especificada
+            if (metadata.playlist) {
+                const playlistId = await this.getOrCreatePlaylist(metadata.playlist);
+                await this.addVideoToPlaylist(uploadResult.videoId, playlistId);
+                uploadResult.playlistId = playlistId;
+            }
+
+            // 3. Adicionar vídeo relacionado se especificado
+            if (metadata.relatedVideoId) {
+                // Nota: YouTube não permite adicionar vídeos relacionados via API
+                // Isso precisa ser feito manualmente no YouTube Studio
+                Logger.info(`Vídeo relacionado sugerido: ${metadata.relatedVideoId}`);
+            }
+
+            return uploadResult;
+
+        } catch (error) {
+            Logger.error('Erro no upload completo', error);
+            throw error;
+        }
+    }
 }
 
 module.exports = YoutubeService;
