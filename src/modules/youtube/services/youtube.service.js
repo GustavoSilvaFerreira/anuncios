@@ -13,6 +13,7 @@ class YoutubeService {
     key = CONSTANTS.secrets.youtubeApiKey;
     clientId = CONSTANTS.secrets.youtubeClientId;
     clientSecret = CONSTANTS.secrets.youtubeClientSecret;
+    serviceAccountKey = CONSTANTS.secrets.youtubeServiceAccountKey;
     uploadProgress = new Map();
 
     constructor(
@@ -32,16 +33,61 @@ class YoutubeService {
         if (!this.clientId || !this.clientSecret) {
             Logger.warn('YouTube OAuth 2.0 credentials não configuradas - upload não funcionará');
         }
+        // Service Account é opcional, não mostrar warning
     }
 
     /**
-     * Obtém cliente OAuth2 autenticado para upload (backend com refresh token)
+     * Obtém cliente autenticado (OAuth2 com refresh token)
      */
-    async _getOAuth2Client() {
-        const YouTubeOAuthService = require('./youtube-oauth.service');
-        const oauthService = new YouTubeOAuthService();
+    async _getAuthClient() {
+        // 1. Priorizar OAuth2 com refresh token (funciona para upload)
+        if (this.clientId && this.clientSecret) {
+            Logger.info('Usando YouTube OAuth 2.0 para autenticação');
+            const YouTubeOAuthService = require('./youtube-oauth.service');
+            const oauthService = new YouTubeOAuthService();
+            
+            return await oauthService.getAuthenticatedClient();
+        }
         
-        return await oauthService.getAuthenticatedClient();
+        // 2. Fallback para Service Account (se configurado)
+        if (this.serviceAccountKey) {
+            Logger.info('Usando YouTube Service Account para autenticação');
+            try {
+                // constants.js já leu o arquivo, só precisa fazer parse do conteúdo
+                // não precisa verificar extensão pois já temos o conteúdo
+                let credentials;
+                try {
+                    credentials = JSON.parse(this.serviceAccountKey);
+                } catch (parseError) {
+                    Logger.error('Erro ao fazer parse do Service Account:', parseError);
+                    throw new Error('JSON do Service Account inválido');
+                }
+                
+                const auth = new GoogleAuth({
+                    credentials: credentials,
+                    scopes: [
+                        'https://www.googleapis.com/auth/youtube.upload',
+                        'https://www.googleapis.com/auth/youtube'
+                    ],
+                    projectId: credentials.project_id
+                });
+                
+                const authClient = await auth.getClient();
+                return authClient;
+            } catch (error) {
+                Logger.error('Erro ao configurar Service Account:', error);
+                throw new Error('Falha na configuração do Service Account');
+            }
+        }
+        
+        // 3. Fallback final para API Key (apenas leitura)
+        if (this.key) {
+            Logger.warn('Usando YouTube API Key para autenticação (apenas leitura - upload não funcionará)');
+            return this.key;
+        }
+        
+        // 4. Nenhuma autenticação configurada
+        throw new Error('Nenhuma autenticação configurada. Configure OAuth2, Service Account ou API Key.');
     }
 
     /**
@@ -67,7 +113,7 @@ class YoutubeService {
 
             const youtube = google.youtube({
                 version: 'v3',
-                auth: await this._getOAuth2Client()
+                auth: await this._getAuthClient()
             });
 
             const response = await youtube.search.list({
@@ -104,7 +150,7 @@ class YoutubeService {
 
             const youtube = google.youtube({
                 version: 'v3',
-                auth: await this._getOAuth2Client()
+                auth: await this._getAuthClient()
             });
 
             const response = await youtube.videos.list({
@@ -149,7 +195,7 @@ class YoutubeService {
             
             const youtube = google.youtube({
                 version: 'v3',
-                auth: await this._getOAuth2Client()
+                auth: await this._getAuthClient()
             });
             
             // 1. Iniciar upload
@@ -240,7 +286,7 @@ class YoutubeService {
             
             const youtube = google.youtube({
                 version: 'v3',
-                auth: await this._getOAuth2Client()
+                auth: await this._getAuthClient()
             });
             
             const response = await youtube.videos.update({
@@ -278,7 +324,7 @@ class YoutubeService {
         try {
             const youtube = google.youtube({
                 version: 'v3',
-                auth: await this._getOAuth2Client()
+                auth: await this._getAuthClient()
             });
             
             const response = await youtube.videos.update({
@@ -352,7 +398,7 @@ class YoutubeService {
         try {
             const youtube = google.youtube({
                 version: 'v3',
-                auth: await this._getOAuth2Client()
+                auth: await this._getAuthClient()
             });
 
             // Buscar playlist existente
@@ -405,7 +451,7 @@ class YoutubeService {
         try {
             const youtube = google.youtube({
                 version: 'v3',
-                auth: await this._getOAuth2Client()
+                auth: await this._getAuthClient()
             });
 
             await youtube.playlistItems.insert({
