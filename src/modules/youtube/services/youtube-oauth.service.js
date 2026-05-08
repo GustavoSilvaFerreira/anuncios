@@ -109,9 +109,59 @@ class YouTubeOAuthService {
     }
 
     /**
+     * Verifica se o refresh token é válido
+     */
+    async validateRefreshToken() {
+        try {
+            if (!this.authClient) {
+                await this.initializeWithRefreshToken();
+            }
+
+            // Tenta atualizar o token para validar
+            await this.authClient.refreshAccessToken();
+            Logger.success('Refresh token válido');
+            return true;
+
+        } catch (error) {
+            Logger.error('Refresh token inválido ou expirado:', error.message);
+            return false;
+        }
+    }
+
+    /**
      * Obtém cliente autenticado para upload
      */
     async getAuthenticatedClient() {
+        // Primeiro, validar o refresh token
+        const isValid = await this.validateRefreshToken();
+        
+        if (!isValid) {
+            Logger.warn('⚠️ Refresh token inválido ou expirado!');
+            Logger.info('🔄 Iniciando obtenção automática de novo refresh token...');
+            Logger.info('📋 Por favor, faça login com a conta da WedConecta quando solicitado');
+            
+            // Executar script automaticamente
+            try {
+                const { spawn } = require('child_process');
+                const ManualOAuthSetup = require('../../../scripts/get-refresh-token-manual');
+                
+                const setup = new ManualOAuthSetup();
+                await setup.setup();
+                
+                Logger.success('✅ Novo refresh token obtido com sucesso!');
+                Logger.info('🔄 Reinicializando autenticação...');
+                
+                // Reinicializar com novo token
+                this.authClient = null;
+                await this.initializeWithRefreshToken();
+                
+            } catch (error) {
+                Logger.error('❌ Falha ao obter novo refresh token automaticamente:', error.message);
+                Logger.info('💡 Execute manualmente: node scripts/get-refresh-token-manual.js');
+                throw new Error('Falha na obtenção automática do refresh token');
+            }
+        }
+
         if (!this.authClient) {
             await this.initializeWithRefreshToken();
         }
