@@ -2,6 +2,8 @@ require('dotenv').config();
 const { Ad } = require('./src');
 const { FILE_DATE_FIRST_POST } = require('./src/config/directory.config');
 const { File } = require('./src/modules/storage');
+const YouTubeOAuthService = require('./src/modules/youtube/services/youtube-oauth.service');
+const { Logger } = require('./src/shared/utils');
 const dateFirstPostTxt = File.getFileContentSync(FILE_DATE_FIRST_POST);
 const [day, month, year] = dateFirstPostTxt.split('/').map(Number);
 
@@ -13,6 +15,12 @@ const [day, month, year] = dateFirstPostTxt.split('/').map(Number);
         year
     }
     try {
+        // VALIDAR REFRESH TOKEN ANTES DE QUALQUER AÇÃO
+        console.log(' Validando autenticação YouTube...');
+        const oauthService = new YouTubeOAuthService();
+        await oauthService.validateRefreshToken();
+        console.log('✅ Autenticação YouTube válida');
+        
         // FLUXO ORIGINAL + UPLOAD E AGENDAMENTO YOUTUBE
         console.log(' Iniciando fluxo completo com upload e agendamento...');
         
