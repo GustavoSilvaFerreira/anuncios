@@ -124,18 +124,6 @@ class YouTubeOAuthService {
 
         } catch (error) {
             Logger.error('Refresh token inválido ou expirado:', error.message);
-            return false;
-        }
-    }
-
-    /**
-     * Obtém cliente autenticado para upload
-     */
-    async getAuthenticatedClient() {
-        // Primeiro, validar o refresh token
-        const isValid = await this.validateRefreshToken();
-        
-        if (!isValid) {
             Logger.warn('⚠️ Refresh token inválido ou expirado!');
             Logger.info('🔄 Iniciando obtenção automática de novo refresh token...');
             Logger.info('📋 Por favor, faça login com a conta da WedConecta quando solicitado');
@@ -143,17 +131,38 @@ class YouTubeOAuthService {
             // Executar script automaticamente
             try {
                 const { spawn } = require('child_process');
-                const ManualOAuthSetup = require('../../../scripts/get-refresh-token-manual');
+                const path = require('path');
                 
-                const setup = new ManualOAuthSetup();
-                await setup.setup();
+                const scriptPath = path.join(process.cwd(), 'scripts', 'get-refresh-token-manual.js');
                 
-                Logger.success('✅ Novo refresh token obtido com sucesso!');
-                Logger.info('🔄 Reinicializando autenticação...');
-                
-                // Reinicializar com novo token
-                this.authClient = null;
-                await this.initializeWithRefreshToken();
+                return new Promise((resolve, reject) => {
+                    const child = spawn('node', [scriptPath], {
+                        stdio: 'inherit',
+                        cwd: process.cwd()
+                    });
+                    
+                    child.on('close', (code) => {
+                        if (code === 0) {
+                            Logger.success('✅ Novo refresh token obtido com sucesso!');
+                            
+                            // Reinicializar com novo token
+                            this.authClient = null;
+                            this.initializeWithRefreshToken().then(() => {
+                                this.validateRefreshToken().then(resolve).catch(reject);
+                            }).catch(reject);
+                        } else {
+                            Logger.error('❌ Falha ao obter novo refresh token automaticamente');
+                            Logger.info('💡 Execute manualmente: node scripts/get-refresh-token-manual.js');
+                            reject(new Error('Falha na obtenção automática do refresh token'));
+                        }
+                    });
+                    
+                    child.on('error', (error) => {
+                        Logger.error('❌ Erro ao executar script:', error.message);
+                        Logger.info('💡 Execute manualmente: node scripts/get-refresh-token-manual.js');
+                        reject(new Error('Falha na obtenção automática do refresh token'));
+                    });
+                });
                 
             } catch (error) {
                 Logger.error('❌ Falha ao obter novo refresh token automaticamente:', error.message);
@@ -161,6 +170,14 @@ class YouTubeOAuthService {
                 throw new Error('Falha na obtenção automática do refresh token');
             }
         }
+    }
+
+    /**
+     * Obtém cliente autenticado para upload
+     */
+    async getAuthenticatedClient() {
+        // Validar o refresh token (já inclui execução automática se inválido)
+        await this.validateRefreshToken();
 
         if (!this.authClient) {
             await this.initializeWithRefreshToken();
